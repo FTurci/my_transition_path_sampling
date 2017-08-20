@@ -11,3 +11,5 @@ local
 atooms/_version.py
 MANIFEST
 *.egg-info
+
+log.lammps

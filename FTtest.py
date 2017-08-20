@@ -6,7 +6,7 @@ import numpy
 from copy import copy
 from atooms.trajectory import TrajectoryRam, TrajectoryXYZ
 from atooms.simulation import Simulation
-from atooms.simulation.backends import DryRunBackend
+from atooms.simulation.backends import DryRunBackend, LammpsBackend
 from atooms.utils import setup_logging
 
 from tps import *
@@ -15,13 +15,21 @@ from tps import *
 n = 1
 slices = 2
 steps = 1
-file_inp = 'trajectory.xyz'
+file_inp = 'lj_rho1.0.xyz'
 setup_logging(level=20)  # 20 is verbose, 40 just warnings
 
 # Set up data structures
 # Replicas of simulations (each simulation might have different parameters)
 # By default the simulation will use a "dry run" backend, i.e. no simulation is actually ran
-sim = [Simulation() for i in range(n)]
+# sim = [Simulation() for i in range(n)]
+cmd = """
+pair_style      lj/cut 2.5
+pair_coeff      1 1 1.0 1.0 2.5
+neighbor        0.3 bin
+neigh_modify    every 20 delay 0 check no
+fix             1 all nve
+"""
+sim = [Simulation(LammpsBackend(file_inp, cmd)) for i in range(n)]
 # Trajectories objects, one per simulation instance. They will have 0 frames each.
 trj = [TrajectoryRam() for i in range(len(sim))]
 # Input trajectories, we only read the first frame to initialize the systems
@@ -45,8 +53,6 @@ for i in range(len(sim)):
         sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
         sim[i].run(steps)
         trj[i][j] = sim[i].system
-        
-
 
 # TPS simulation
 tps_steps = 20
