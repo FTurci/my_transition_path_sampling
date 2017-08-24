@@ -1,30 +1,52 @@
 #!/usr/bin/env python
 
-"""Sketch of TPS simulation."""
+"""Test TPS simulation for KA mixture."""
 
 import numpy as np
 from copy import copy
 from atooms.trajectory import TrajectoryRam, TrajectoryXYZ
+from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation
-from atooms.simulation.backends import DryRunBackend, LammpsBackend
+from atooms.simulation.backend_lammps import LammpsBackend
 from atooms.utils import setup_logging
 import tps
 
+def self_overlap(r0, r1, side, a_square):
+    rij = np.sum((r0 - r1)**2, axis=1) # square displacement
+    qij = rij.flatten() < a_square
+    return qij.sum()
+
+def mobility(t):
+    # Note: the trajectory must be unfolded
+    pos = [s.dump('pos') for s in Unfolded(t)]
+    side = t[0].cell.side
+    a = 0.3
+    s = 0
+    for j in range(1, len(t)):
+        s += self_overlap(pos[j], pos[j-1], side, a**2)
+    print '# tps C=%s [len=%s]' % (s, len(t))
+    return s
+
+# TPS parameters
+tps.runsteps = 10000
+tps.temperature = 0.8
+tps.k = 0.01
+tps.calculate_order_parameter = mobility
 
 # Parameters
 n = 1
 slices = 2
-steps = 1
-file_inp = 'lj_rho1.0.xyz'
+steps = 10000
+file_inp = 'data/ka_rho1.2.xyz'
 setup_logging(level=10)  # 20 is verbose, 40 just warnings
 
 # Set up data structures
 # Replicas of simulations (each simulation might have different parameters)
-# By default the simulation will use a "dry run" backend, i.e. no simulation is actually ran
-# sim = [Simulation() for i in range(n)]
 cmd = """
 pair_style      lj/cut 2.5
-pair_coeff      1 1 1.0 1.0 2.5
+pair_coeff      1 1 1.0 1.0  2.5
+pair_coeff      1 2 1.5 0.8  2.0
+pair_coeff      2 2 0.5 0.88 2.2
 neighbor        0.3 bin
 neigh_modify    every 20 delay 0 check no
 fix             1 all nve

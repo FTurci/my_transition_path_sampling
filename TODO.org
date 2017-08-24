@@ -1,0 +1,10 @@
+* TODO add class
+<2017-08-24 Thu>
+* TODO add test KA with mobility
+<2017-08-24 Thu>
+* TODO pass generic function as order parameter
+<2017-08-24 Thu>
+* TODO fix setup and readme
+<2017-08-24 Thu>
+* TODO check time reversal issue
+<2017-08-24 Thu>
