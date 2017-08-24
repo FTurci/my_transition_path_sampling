@@ -1,7 +1,7 @@
 Transition path sampling
 ========================
 
-A generic, multi-core / multi-GPU implementation of the [transition path sampling](https://en.wikipedia.org/wiki/Transition_path_sampling) simulation method for atomic and molecular systems. It relies on the [atooms](https://gitlab.info-ufr.univ-montp2.fr/atooms/atooms.git) framework and efficient simulation backends (ex. LAMMPS).
+A generic, multi-core / multi-GPU implementation of the [transition path sampling](https://en.wikipedia.org/wiki/Transition_path_sampling) simulation method for atomic and molecular systems. It relies on the [atooms](https://gitlab.info-ufr.univ-montp2.fr/atooms/atooms.git) framework and on efficient simulation backends (ex. [LAMMPS](http://lammps.sandia.gov/)).
 
 Quick start
 -----------
@@ -43,4 +43,5 @@ make install
 Authors
 -------
 Daniele Coslovich: https://www.coulomb.univ-montp2.fr/perso/daniele.coslovich/
+
 Francesco Turci: https://francescoturci.wordpress.com/
