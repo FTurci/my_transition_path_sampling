@@ -7,7 +7,7 @@ Quick start
 -----------
 
 ```python
-from atooms.backends.rumd import LammpsBackend
+from atooms.backends.lammps import LammpsBackend
 from atooms.simulation import Simulation
 from atooms.transition_path_sampling import TransitionPathSampling
 
@@ -28,7 +28,7 @@ tps.run()
 
 Installation
 ------------
-The easiest way to install sample is with pip
+The easiest way to install sample is with pip (coming soon!)
 ```
 pip install transition_path_sampling
 ```
