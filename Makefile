@@ -2,8 +2,11 @@ PROJECT = sample
 
 .PHONY: all dist test version install clean
 
-all:
-	cd ${PROJECT}; make; cd ..
+all: version
+
+version:
+	@echo __commit__ = \'$(COMMIT_DIRTY)\' > transition_path_sampling/_commit.py
+	@echo __date__ = \'$(DATE)\' >> transition_path_sampling/_commit.py
 
 dist:
 	python setup.py sdist
