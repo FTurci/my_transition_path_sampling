@@ -1,6 +1,7 @@
 PROJECT = transition_path_sampling
 COMMIT = $$(git describe --abbrev=6 --dirty --always 2>/dev/null || echo 0)
-DATE=$$(git show -s --format=%ci $(COMMIT) | cut -d " " -f 1)
+COMMIT_CLEAN = $$(git describe --abbrev=6 --always 2>/dev/null || echo 0)
+DATE=$$(git show -s --format=%ci $(COMMIT_CLEAN) | cut -d " " -f 1)
 
 .PHONY: all dist test version install clean
 
