@@ -5,6 +5,7 @@ A generic, multi-core / multi-GPU implementation of the [transition path samplin
 
 Quick start
 -----------
+From python:
 
 ```python
 from atooms.backends.lammps import LammpsBackend
@@ -25,6 +26,13 @@ sim = [Simulation(s) for s in sim_backend]
 tps = TransitionPathSampling(sim, output_path='/tmp/output_dir', steps=10)
 tps.run()
 ```
+
+From the command line:
+```shell
+tps.py -n 10 -N 2000 --temperature 1.0 --script data/ka_rho1.2.xyz.lammps -i data/ka_rho1.2.xyz /tmp/output
+```
+
+
 
 Installation
 ------------

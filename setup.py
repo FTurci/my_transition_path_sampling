@@ -23,7 +23,7 @@ setup(name='transition_path_sampling',
       packages=['transition_path_sampling'],
       license='GPLv3',
       install_requires=['atooms'],
-      scripts=[],
+      scripts=['bin/tps.py'],
       classifiers=[
           'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
           'Programming Language :: Python',

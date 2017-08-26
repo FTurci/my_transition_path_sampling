@@ -14,7 +14,7 @@ except ImportError:
     _LAMMPS = False
 
 setup_logging(name='atooms.simulation', level=40)  # 20 is verbose, 40 just warnings
-setup_logging(name='transition_path_sampling', level=40)
+setup_logging(name='transition_path_sampling', level=20)
 
 class Test(unittest.TestCase):
 
