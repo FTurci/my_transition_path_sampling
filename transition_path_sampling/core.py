@@ -172,6 +172,7 @@ def mc_step(simulation, trajectory, umbrella, k, bias, ratio=0.25):
         # reject, i.e. do nothing
         pass
 
+    return bias
 
 class TransitionPathSampling(Simulation):
 
@@ -202,12 +203,15 @@ class TransitionPathSampling(Simulation):
 
         # TODO: should we set self.backend to None??
 
+        # Make sure base directories exist
+        from atooms.utils import mkdir
+        mkdir(self.output_path)
+
     def __str__(self):
         return 'Transition path sampling'
 
     def run_until(self, steps):
         # just shortcuts
-        # TODO: SOMETHING NASTY HERE! For some reason this gets called twice, with steps = to the one of the backend!
         sim, trj = self.sim, self.trj
 
         # TODO: instead of run() we could use run_until() of sim[i], as we do in PT. 
@@ -216,31 +220,32 @@ class TransitionPathSampling(Simulation):
         # Or even we could have a local logging instance as self.log which can be muted on a per simulation basis
 
         # TODO: FT initialise trajectories: more elegant way?
-        for i in range(len(sim)):
-            #frame 0:
-            # TODO: DC this one is not necessary here, the backend has it already
-            sim[i].system = copy(self.inp[i][0])  # copy() might not be necessary here
-            # TODO: fix this hack
-            sim[i].thermostat_temperature = self.temperature
-            sim[i].run()
-            # Trajectory frame assignement takes care of copying, so copy() is not necessary here
-            trj[i][0] = sim[i].system
-            # Run 0
-            for j in range(1, self.slices):
-                sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
+        if self.steps == 0:
+            for i in range(len(sim)):
+                #frame 0:
+                # TODO: DC this one is not necessary here, the backend has it already
+                sim[i].system = copy(self.inp[i][0])  # copy() might not be necessary here
+                # TODO: fix this hack
+                sim[i].thermostat_temperature = self.temperature
                 sim[i].run()
-                trj[i][j] = sim[i].system
+                # Trajectory frame assignement takes care of copying, so copy() is not necessary here
+                trj[i][0] = sim[i].system
+                # Run 0
+                for j in range(1, self.slices):
+                    sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
+                    sim[i].run()
+                    trj[i][j] = sim[i].system
 
-        # TPS simulation
-        # calculating the value of the initial potential
-        setup(self.bias, sim, trj, self.umbrellas, self.k)
+            # TPS simulation
+            # calculating the value of the initial potential
+            setup(self.bias, sim, trj, self.umbrellas, self.k)
+            log.debug("tps bias after initialisation %s", self.bias)
 
-        log.debug("tps bias after initialisation", self.bias)
-        for k in range(steps):
-            log.info('tps step %s', k)
+        for k in range(steps - self.steps):
+            log.info('tps step %s', self.steps + k)
             # We might have several replicas of simulations with different parameters
             for i in range(len(sim)): # FT: to be distributed?
-                mc_step(sim[i], trj[i], self.umbrellas[i], self.k, self.bias[i])
+                self.bias[i] = mc_step(sim[i], trj[i], self.umbrellas[i], self.k, self.bias[i])
 
         # Its up to us to update our steps
         self.steps = steps
