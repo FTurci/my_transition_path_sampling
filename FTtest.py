@@ -15,7 +15,7 @@ import tps
 n = 1
 slices = 2
 steps = 1
-file_inp = 'lj_rho1.0.xyz'
+file_inp = 'data/lj_rho1.0.xyz'
 setup_logging(level=10)  # 20 is verbose, 40 just warnings
 
 # Set up data structures
