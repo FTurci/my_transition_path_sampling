@@ -10,17 +10,19 @@ except ImportError:
 with open('README.md') as f:
     readme = f.read()
 
+with open('transition_path_sampling/_version.py') as f:
+    exec(f.read())
+
 setup(name='transition_path_sampling',
-      version='0.1',
-      description='',
+      version=__version__,
+      description='An atooms frontend for transition path sampling simulations',
       long_description=readme,
       author='Daniele Coslovich',
       author_email='daniele.coslovich@umontpellier.fr',
       url='https://gitlab.info-ufr.univ-montp2.fr/daniele.coslovich/atooms/transition_path_sampling',
-      packages=[],
-      #packages=find_packages(exclude=('tests', 'docs')),
+      packages=['transition_path_sampling'],
       license='GPLv3',
-      install_requires=[],
+      install_requires=['atooms'],
       scripts=[],
       classifiers=[
           'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
