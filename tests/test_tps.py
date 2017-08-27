@@ -4,12 +4,12 @@ import unittest
 
 from atooms.utils import setup_logging
 from atooms.simulation import Simulation
-from atooms.simulation.backend_dryrun import DryRunBackend
+from atooms.simulation.dryrun import DryRunBackend
 from transition_path_sampling import TransitionPathSampling
 
 try:
     _LAMMPS = True
-    from atooms.simulation.backend_lammps import LammpsBackend
+    from atooms.simulation.lammps import LammpsBackend
 except ImportError:
     _LAMMPS = False
 

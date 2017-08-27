@@ -14,4 +14,3 @@ def write_thermo(tps):
                 fh.write('# columns:' + obs + '\n')
         with open(f, 'a') as fh:
             fh.write('%d %s %s\n' % (tps.steps, tps.bias[i], tps.umbrellas[i]))
-

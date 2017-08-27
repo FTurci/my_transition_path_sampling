@@ -13,5 +13,3 @@ except ImportError:
     __date__ = ""
 
 from core import *
-
-

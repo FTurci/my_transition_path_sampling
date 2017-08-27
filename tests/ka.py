@@ -7,7 +7,7 @@ from copy import copy
 from atooms.trajectory import TrajectoryRam, TrajectoryXYZ
 from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation
-from atooms.simulation.backend_lammps import LammpsBackend
+from atooms.simulation.lammps import LammpsBackend
 from atooms.utils import setup_logging
 import tps
 
