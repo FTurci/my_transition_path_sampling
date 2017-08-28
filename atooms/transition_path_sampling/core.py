@@ -5,7 +5,7 @@ import numpy as np
 from copy import copy
 from atooms.trajectory import TrajectoryRam, TrajectoryXYZ
 from atooms.simulation import Simulation
-from transition_path_sampling import __version__, __date__, __commit__
+from atooms.transition_path_sampling import __version__, __date__, __commit__
 
 log = logging.getLogger(__name__)
 
@@ -173,6 +173,7 @@ def mc_step(simulation, trajectory, umbrella, k, bias, ratio=0.25):
         pass
 
     return bias
+
 
 class TransitionPathSampling(Simulation):
 

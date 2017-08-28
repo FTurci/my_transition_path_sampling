@@ -10,7 +10,7 @@ From python:
 ```python
 from atooms.backends.lammps import LammpsBackend
 from atooms.simulation import Simulation
-from transition_path_sampling import TransitionPathSampling
+from atooms.transition_path_sampling import TransitionPathSampling
 
 # Create backends and wrap them as simulation instances
 file_input = 'data/lj.xyz'

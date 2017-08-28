@@ -5,7 +5,7 @@ import unittest
 from atooms.utils import setup_logging
 from atooms.simulation import Simulation
 from atooms.simulation.dryrun import DryRunBackend
-from transition_path_sampling import TransitionPathSampling
+from atooms.transition_path_sampling import TransitionPathSampling
 
 try:
     _LAMMPS = True

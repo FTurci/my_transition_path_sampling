@@ -12,4 +12,4 @@ except ImportError:
     __commit__ = ""
     __date__ = ""
 
-from core import *
+from core import TransitionPathSampling
