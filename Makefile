@@ -8,8 +8,8 @@ DATE=$$(git show -s --format=%ci $(COMMIT_CLEAN) | cut -d " " -f 1)
 all: version
 
 version:
-	@echo __commit__ = \'$(COMMIT)\' > transition_path_sampling/_commit.py
-	@echo __date__ = \'$(DATE)\' >> transition_path_sampling/_commit.py
+	@echo __commit__ = \'$(COMMIT)\' > atooms/${PROJECT}/_commit.py
+	@echo __date__ = \'$(DATE)\' >> atooms/${PROJECT}/_commit.py
 
 dist:
 	python setup.py sdist
