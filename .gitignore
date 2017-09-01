@@ -8,7 +8,7 @@ local
 
 # Ignore version file in package.
 # It will be updated upon build/install
-atooms/_version.py
+_commit.py
 MANIFEST
 *.egg-info
 
