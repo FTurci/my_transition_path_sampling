@@ -55,6 +55,30 @@ class Test(unittest.TestCase):
         self.assertEqual(tps.sim[0].steps, 10)
         self.assertEqual(tps.steps, 5)
 
+    def test_shoot_shift(self):
+        n = 1
+        slices = 10
+        fileinp = 'data/ka_rho1.2.xyz'
+        bck = [DryRunBackend() for i in range(n)]
+        # TODO: temporarily needed by tps, should be removed
+        for b in bck:
+            b.fileinp = fileinp
+        sim = [Simulation(bck[i], steps=10) for i in range(n)]
+        from atooms.transition_path_sampling import core
+        from atooms.transition_path_sampling.core import shiftBackward, shiftForward, \
+            shootBackward, shootForward, firstHalf, secondHalf
+        def test_order(t):
+            self.assertEqual(len(t), slices)
+            return len(t)
+        core.calculate_order_parameter = test_order
+        tps = TransitionPathSampling(sim, temperature=0.8, steps=1, slices=slices)
+        tps.run()
+        nt = len(tps.trj[0])
+        self.assertEqual(nt, len(shiftBackward(tps.sim[0], tps.trj[0], firstHalf(tps.trj[0]))))
+        self.assertEqual(nt, len(shootBackward(tps.sim[0], tps.trj[0], secondHalf(tps.trj[0]))))
+        self.assertEqual(nt, len(shiftForward(tps.sim[0], tps.trj[0], firstHalf(tps.trj[0]))))
+        self.assertEqual(nt, len(shootForward(tps.sim[0], tps.trj[0], secondHalf(tps.trj[0]))))
+
 if __name__ == '__main__':
     unittest.main(verbosity=0)
 

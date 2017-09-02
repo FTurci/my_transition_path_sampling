@@ -96,7 +96,7 @@ def shiftBackward(sim, tj, slice):
     sim.system.temperature = sim.thermostat_temperature
     for j in range(slice):
         sim.run()
-        copytj[j] = sim.system
+        copytj[j+(trajectoryLength-slice)] = sim.system
     return copytj
 
 
