@@ -51,7 +51,7 @@ def shootBackward(sim, tj,slice):
     # WARNING: TIME REVERSAL MISSING
     #can/should i reverse time? 
     for j in range(slice-1, -1, -1):
-        sim.run(steps)
+        sim.run(runsteps)
         tj[j] = sim.system
     return tj
 
