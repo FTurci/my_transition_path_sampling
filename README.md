@@ -8,8 +8,8 @@ Quick start
 From python:
 
 ```python
-from atooms.backends.lammps import LammpsBackend
 from atooms.simulation import Simulation
+from atooms.simulation.lammps import LammpsBackend
 from atooms.transition_path_sampling import TransitionPathSampling
 
 # Create backends and wrap them as simulation instances
