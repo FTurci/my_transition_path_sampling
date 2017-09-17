@@ -10,12 +10,12 @@ except ImportError:
 with open('README.md') as f:
     readme = f.read()
 
-with open('transition_path_sampling/_version.py') as f:
+with open('atooms/transition_path_sampling/_version.py') as f:
     exec(f.read())
 
 setup(name='transition_path_sampling',
       version=__version__,
-      description='An atooms frontend for transition path sampling simulations',
+      description='An atooms package for transition path sampling simulations',
       long_description=readme,
       author='Daniele Coslovich',
       author_email='daniele.coslovich@umontpellier.fr',
