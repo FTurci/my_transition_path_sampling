@@ -5,6 +5,7 @@ import numpy as np
 from copy import copy
 from atooms.trajectory import TrajectoryRam, TrajectoryXYZ
 from atooms.simulation import Simulation
+from atooms.backends.dryrun import DryRun
 from atooms.transition_path_sampling import __version__, __date__, __commit__
 
 log = logging.getLogger(__name__)
@@ -179,7 +180,7 @@ class TransitionPathSampling(Simulation):
 
     def __init__(self, sim, temperature, steps=0, output_path=None,
                  slices=2, k=0.01, restart=False):
-        Simulation.__init__(self, output_path=output_path,
+        Simulation.__init__(self, DryRun(), output_path=output_path,
                             steps=steps, restart=restart)
         self.sim = sim
         # Note: the number of steps of the backend is set upon construction

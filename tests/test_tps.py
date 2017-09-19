@@ -4,12 +4,12 @@ import unittest
 
 from atooms.utils import setup_logging
 from atooms.simulation import Simulation
-from atooms.simulation.dryrun import DryRunBackend
+from atooms.backends.dryrun import DryRun
 from atooms.transition_path_sampling import TransitionPathSampling
 
 try:
     _LAMMPS = True
-    from atooms.simulation.lammps import LammpsBackend
+    from atooms.backends.lammps import Lammps
 except ImportError:
     _LAMMPS = False
 
@@ -24,7 +24,7 @@ class Test(unittest.TestCase):
     def test_dryrun(self):
         n = 1
         fileinp = 'data/ka_rho1.2.xyz'
-        bck = [DryRunBackend() for i in range(n)]
+        bck = [DryRun() for i in range(n)]
         # TODO: temporarily needed by tps, should be removed
         for b in bck:
             b.fileinp = fileinp
@@ -49,7 +49,7 @@ class Test(unittest.TestCase):
         neigh_modify    every 20 delay 0 check no
         fix             1 all nve
         """
-        sim = [Simulation(LammpsBackend(file_inp, cmd), steps=10) for i in range(n)]
+        sim = [Simulation(Lammps(file_inp, cmd), steps=10) for i in range(n)]
         tps = TransitionPathSampling(sim, temperature=0.8, steps=5)
         tps.run()
         self.assertEqual(tps.sim[0].steps, 10)
@@ -59,7 +59,7 @@ class Test(unittest.TestCase):
         n = 1
         slices = 10
         fileinp = 'data/ka_rho1.2.xyz'
-        bck = [DryRunBackend() for i in range(n)]
+        bck = [DryRun() for i in range(n)]
         # TODO: temporarily needed by tps, should be removed
         for b in bck:
             b.fileinp = fileinp
