@@ -9,7 +9,7 @@ from atooms.transition_path_sampling import TransitionPathSampling
 
 try:
     _LAMMPS = True
-    from atooms.backends.lammps import Lammps
+    from atooms.backends.lammps import LAMMPS
 except ImportError:
     _LAMMPS = False
 
@@ -49,7 +49,7 @@ class Test(unittest.TestCase):
         neigh_modify    every 20 delay 0 check no
         fix             1 all nve
         """
-        sim = [Simulation(Lammps(file_inp, cmd), steps=10) for i in range(n)]
+        sim = [Simulation(LAMMPS(file_inp, cmd), steps=10) for i in range(n)]
         tps = TransitionPathSampling(sim, temperature=0.8, steps=5)
         tps.run()
         self.assertEqual(tps.sim[0].steps, 10)

@@ -5,7 +5,7 @@
 import numpy as np
 from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation
-from atooms.simulation.lammps import LammpsBackend
+from atooms.simulation.lammps import LAMMPS
 from atooms.utils import setup_logging
 from atooms.transition_path_sampling import core, TransitionPathSampling
 
@@ -40,7 +40,7 @@ neighbor        0.3 bin
 neigh_modify    every 20 delay 0 check no
 fix             1 all nve
 """
-sim = [Simulation(LammpsBackend(file_inp, cmd), steps=100) for i in range(nsim)]
+sim = [Simulation(LAMMPS(file_inp, cmd), steps=100) for i in range(nsim)]
 tps = TransitionPathSampling(sim, temperature=0.8, steps=10, slices=10)
 core.calculate_order_parameter = mobility
 tps.run()
