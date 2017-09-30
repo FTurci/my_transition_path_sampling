@@ -24,4 +24,4 @@ develop:
 	python setup.py develop --user
 
 clean:
-	rm -f ${PROJECT}/*pyc ${PROJECT}/*/*pyc tests/*pyc
+	rm -f atooms/${PROJECT}/*pyc atooms/${PROJECT}/*/*pyc tests/*pyc

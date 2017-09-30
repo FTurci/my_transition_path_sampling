@@ -2,8 +2,8 @@
 
 import os
 import numpy
-from atooms.utils import rank, size, comm, barrier
-from atooms.utils import rmd, rmf, mkdir
+from atooms.core.utils import rank, size, comm, barrier
+from atooms.core.utils import rmd, rmf, mkdir
 
 def write_thermo(tps):
     for i in range(len(tps.sim)):
