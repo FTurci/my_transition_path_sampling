@@ -6,7 +6,7 @@ import numpy as np
 from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation
 from atooms.simulation.lammps import LAMMPS
-from atooms.utils import setup_logging
+from atooms.core.utils import setup_logging
 from atooms.transition_path_sampling import core, TransitionPathSampling
 
 setup_logging(name='atooms.simulation', level=40)  # 20 is verbose, 40 just warnings

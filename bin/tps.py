@@ -5,8 +5,8 @@
 import sys
 import logging
 
-from atooms.utils import setup_logging
-from atooms.utils import size, rank, barrier
+from atooms.core.utils import setup_logging
+from atooms.core.utils import size, rank, barrier
 from atooms.simulation.backends import LammpsBackend
 from atooms.simulation import Simulation, Scheduler
 from transition_path_sampling import TransitionPathSampling

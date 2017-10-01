@@ -2,7 +2,7 @@
 
 import unittest
 
-from atooms.utils import setup_logging
+from atooms.core.utils import setup_logging
 from atooms.simulation import Simulation
 from atooms.backends.dryrun import DryRun
 from atooms.transition_path_sampling import TransitionPathSampling

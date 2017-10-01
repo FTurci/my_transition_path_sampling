@@ -48,7 +48,7 @@ def shootBackward(sim, tj, slice):
     sim.system.temperature = sim.thermostat_temperature
     # !!!
     # WARNING: TIME REVERSAL MISSING
-    #can/should i reverse time? 
+    #can/should i reverse time?
     for j in range(slice-1, -1, -1):
         sim.run()
         tj[j] = sim.system
@@ -69,14 +69,14 @@ def shiftForward(sim, tj, slice):
 
     # !!!
     # WARNING: TIME REVERSAL MISSING
-    #can/should i reverse time? 
+    #can/should i reverse time?
     sim.system = copytj[-1]
     sim.system.temperature = sim.thermostat_temperature
     for j in range(slice, trajectoryLength, 1):
         sim.run()
         copytj[j] = sim.system
     return copytj
-    
+
 def shiftBackward(sim, tj, slice):
     """
     Perform a forward shifting move: delete a piece of trajectory
@@ -178,6 +178,8 @@ def mc_step(simulation, trajectory, umbrella, k, bias, ratio=0.25):
 
 class TransitionPathSampling(Simulation):
 
+    version = '%s+%s (%s)' % (__version__, __commit__, __date__)
+
     def __init__(self, sim, temperature, steps=0, output_path=None,
                  slices=2, k=0.01, restart=False):
         Simulation.__init__(self, DryRun(), output_path=output_path,
@@ -185,12 +187,12 @@ class TransitionPathSampling(Simulation):
         self.sim = sim
         # Note: the number of steps of the backend is set upon construction
         self.temperature = temperature
-        # Umbrellas parameters 
+        # Umbrellas parameters
         self.k = k  # spring constant
-        self.umbrellas = range(len(self.sim))  # order parameters 
+        self.umbrellas = range(len(self.sim))  # order parameters
         self.slices = slices
 
-        # Trajectories objects, one per simulation instance. 
+        # Trajectories objects, one per simulation instance.
         # They will have 0 frames each.
         self.trj = [TrajectoryRam() for i in range(len(self.sim))]
         # Input trajectories,
@@ -206,7 +208,7 @@ class TransitionPathSampling(Simulation):
         # TODO: should we set self.backend to None??
 
         # Make sure base directories exist
-        from atooms.utils import mkdir
+        from atooms.core.utils import mkdir
         mkdir(self.output_path)
 
     def __str__(self):
@@ -216,13 +218,13 @@ class TransitionPathSampling(Simulation):
         # just shortcuts
         sim, trj = self.sim, self.trj
 
-        # TODO: instead of run() we could use run_until() of sim[i], as we do in PT. 
-        # This would avoid the verbose logging... but we should use an incremental variable 
+        # TODO: instead of run() we could use run_until() of sim[i], as we do in PT.
+        # This would avoid the verbose logging... but we should use an incremental variable
         # for the running steps. Let's see how it goes...
         # Or even we could have a local logging instance as self.log which can be muted on a per simulation basis
 
         # TODO: FT initialise trajectories: more elegant way?
-        if self.steps == 0:
+        if self.current_step == 0:
             for i in range(len(sim)):
                 #frame 0:
                 # TODO: DC this one is not necessary here, the backend has it already
@@ -243,27 +245,17 @@ class TransitionPathSampling(Simulation):
             setup(self.bias, sim, trj, self.umbrellas, self.k)
             log.debug("tps bias after initialisation %s", self.bias)
 
-        for k in range(steps - self.steps):
-            log.info('tps step %s', self.steps + k)
+        for k in range(steps - self.current_step):
+            log.info('tps step %s', self.current_step + k)
             # We might have several replicas of simulations with different parameters
             for i in range(len(sim)): # FT: to be distributed?
                 self.bias[i] = mc_step(sim[i], trj[i], self.umbrellas[i], self.k, self.bias[i])
 
         # Its up to us to update our steps
-        self.steps = steps
+        self.current_step = steps
 
-    def _report(self):
-        log.info('transition path sampling version: %s+%s (%s)', __version__, __commit__, __date__)
-        log.info('backend: %s' % self.sim[0])
-        log.info('output path: %s' % self.output_path)
-        log.info('number of replicas: %d' % len(self.sim))
-        #log.info('number of processes: %d' % size)
-        #barrier()
-
-    def _report_end(self):
-        import datetime
-        log.info('simulation ended on: %s' % datetime.datetime.now().strftime('%Y-%m-%d at %H:%M'))
-        log.info('final steps: %d' % self.steps)
-        log.info('wall time [s]: %.1f' % self.elapsed_wall_time())
-        log.info('average TSP [s/step/particle]: %.2e' % (self.wall_time_per_step_particle()))
-
+    def _info_backend(self):
+        txt = 'backend: %s' % self.sim[0]
+        txt += 'output path: %s' % self.output_path
+        txt += 'number of replicas: %d' % len(self.sim)
+        return txt
