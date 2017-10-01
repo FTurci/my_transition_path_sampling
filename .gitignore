@@ -5,6 +5,8 @@
 dist
 build
 local
+cover
+.coverage
 
 # Ignore version file in package.
 # It will be updated upon build/install
