@@ -182,9 +182,24 @@ class TransitionPathSampling(Simulation):
 
     def __init__(self, sim, temperature, steps=0, output_path=None,
                  slices=2, k=0.01, restart=False):
+        """
+        Construct a tps instance that will run for `steps` iterations.
+        
+        - `sim` is either a Simulation instance or a list / tuple of
+          Simulation instances.
+        - `temperature` is the thermostat temperature
+        - `slices` is the number of subtrajectories used to compute
+        the order parameter
+        - `k` is the spring constant for the umbrellas if there is
+        more than one `sim` instances
+        """
         Simulation.__init__(self, DryRun(), output_path=output_path,
                             steps=steps, restart=restart)
-        self.sim = sim
+        # Non-pythonic check that sim is a list or tuple
+        if not (isinstance(sim, list) or isinstance(sim, tuple)):
+            self.sim = [sim]
+        else:
+            self.sim = sim
         # Note: the number of steps of the backend is set upon construction
         self.temperature = temperature
         # Umbrellas parameters

@@ -22,6 +22,17 @@ class Test(unittest.TestCase):
         pass
 
     def test_dryrun(self):
+        fileinp = 'data/ka_rho1.2.xyz'
+        bck = DryRun()
+        # TODO: temporarily needed by tps, should be removed
+        bck.fileinp = fileinp
+        sim = Simulation(bck, steps=3)
+        tps = TransitionPathSampling(sim, temperature=0.8, steps=1)
+        tps.run()
+        self.assertEqual(tps.sim[0].steps, 3)
+        self.assertEqual(tps.steps, 1)
+
+    def test_dryrun_multi(self):
         n = 1
         fileinp = 'data/ka_rho1.2.xyz'
         bck = [DryRun() for i in range(n)]
