@@ -9,7 +9,7 @@ From python:
 
 ```python
 from atooms.simulation import Simulation
-from atooms.simulation.lammps import LammpsBackend
+from atooms.simulation.lammps import LAMMPS
 from atooms.transition_path_sampling import TransitionPathSampling
 
 # Create backends and wrap them as simulation instances
@@ -21,8 +21,8 @@ neighbor        0.3 bin
 neigh_modify    every 20 delay 0 check no
 fix             1 all nve
 """
-sim_backend = [LammpsBackend(file_input, cmd) for i in range(1)]
-sim = [Simulation(s, steps=1000) for s in sim_backend]
+bck = LAMMPS(file_input, cmd)
+sim = Simulation(bck, steps=1000)
 tps = TransitionPathSampling(sim, output_path='/tmp/output_dir', steps=10)
 tps.run()
 ```
