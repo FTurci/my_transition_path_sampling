@@ -4,7 +4,10 @@
 import logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-from _version import __version__
+try:
+    from _version import __version__
+except ImportError:
+    __version__ = ""
 
 try:
     from _commit import __commit__, __date__
