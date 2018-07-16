@@ -15,4 +15,4 @@ except ImportError:
     __commit__ = ""
     __date__ = ""
 
-from core import TransitionPathSampling
+from .core import TransitionPathSampling
