@@ -60,11 +60,11 @@ neigh_modify    every 20 delay 0 check no
 velocity        all create {0} 12345
 #fix             1 all nvt temp {0} {0} 100.0
 fix             1 all nve
-
-thermo  1   
 timestep        {1}
 """.format(T, dt)
 
+import sys
+field = float(sys.argv[1])
 # Initial equilibration
 # equiibration_rmsd = 0.1
 # check_frequency = 100 #steps
@@ -81,7 +81,7 @@ timestep        {1}
 #     thd.write(equilibrator.system,step=0)
 
 sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(t_obs/dt)) for i in range(nsim)]
-tps = TransitionPathSampling(sim, output_path='output', temperature=T, steps=10, frames=200, biasing_field=0.0)
+tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=200, biasing_field=field)
 for s in tps.sim:
     s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)
