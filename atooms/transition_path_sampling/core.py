@@ -256,10 +256,10 @@ class TransitionPathSampling(Simulation):
             sim.order_parameter = None
 
         # TODO: should we set self.backend to None??
-
+        # TODO: might be needed for PT
         # Make sure base directories exist
-        from atooms.core.utils import mkdir
-        mkdir(self.output_path)
+        # from atooms.core.utils import mkdir
+        # mkdir(self.output_path)
 
     def __str__(self):
         return 'Transition path sampling'

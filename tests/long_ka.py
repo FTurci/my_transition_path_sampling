@@ -12,7 +12,7 @@ from atooms.transition_path_sampling import core, TransitionPathSampling
 from atooms.trajectory import TrajectoryXYZ
 
 setup_logging(name='atooms.simulation', level=40)  # 20 is verbose, 40 just warnings
-setup_logging(name='transition_path_sampling', level=20)
+setup_logging(name='transition_path_sampling', level=40)
 
 
 def self_overlap(r0, r1, side, a_square):
@@ -38,15 +38,18 @@ def write_thermo_tps(sim):
     f = sim.output_path + 'thermo'
     if sim.current_step == 0:
         with open(f, 'w') as fh:
-            fh.write('# \n')
+            fh.write('# columns: steps, order parameter, normalized order parameter\n')
     else:
-        q = sim.sim[0].order_parameter = core.calculate_order_parameter(sim.trj[i])
+        q = sim.sim[0].order_parameter
+        #q = core.calculate_order_parameter(sim.trj[i])
         with open(f, 'a') as fh:
-            fh.write('%d %s\n' % (sim.current_step, q))
+            fh.write('%d %s %s\n' % (sim.current_step, q, q / len(sim.sim[0].system.particle)))
 
 nsim = 1
-t_obs = 300.
 dt = 0.005
+frames = 200
+t_obs = 300.0 # 10000 * dt
+delta_t = t_obs / frames
 T = 0.6
 
 file_inp = 'data/ka_rho1.2_T0.6.xyz'
@@ -80,8 +83,8 @@ field = float(sys.argv[1])
 # with TrajectoryXYZ(file_inp+"_equilibration.xyz", 'w') as thd:
 #     thd.write(equilibrator.system,step=0)
 
-sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(t_obs/dt)) for i in range(nsim)]
-tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=200, biasing_field=field)
+sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(round(delta_t / dt))) for i in range(nsim)]
+tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=frames, biasing_field=field)
 for s in tps.sim:
     s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)
