@@ -11,119 +11,119 @@ from atooms.transition_path_sampling import __version__, __date__, __commit__
 log = logging.getLogger(__name__)
 
 
-def firstHalf(tj, margin=0):
-    """Return an integer in [margin,trajectoryLength/2)"""
-    trajectoryLength = len(tj)
-    return margin+np.random.randint(trajectoryLength/2-margin)
+def first_half(tj, margin=0):
+    """Return an integer in [margin,last/2)"""
+    last = len(tj)
+    return margin+np.random.randint(last/2-margin)
 
-def secondHalf(tj, margin=0):
-    """Return an integer in [trajectoryLength/2,trajectoryLength-margin)"""
-    trajectoryLength = len(tj)
-    return trajectoryLength-margin-1-np.random.randint(trajectoryLength/2-margin)
+def second_half(tj, margin=0):
+    """Return an integer in [last/2,last-margin)"""
+    last = len(tj)
+    return last-margin-1-np.random.randint(last/2-margin)
 
-def shootForward(sim, tj, slice):
+def shoot_forward(sim, tj, frame):
     """
-    Perform a forward shooting move: from a selected slice, randomise
-    the velocities and integrate a new piece of trajectory forward in
+    Perform a _forward shooting move: from a selected frame, randomise
+    the velocities and integrate a new piece of trajectory _forward in
     time.
     """
     log.debug('tps shoot forward')
-    sim.system = tj[slice]
-    sim.system.temperature = sim.thermostat_temperature
+    sim.system = tj[frame]
+    # sim.system.set_temperature(sim.temperature)
 
-    # overwrtiting from slice till the end
-    for j in range(slice, len(tj)):
+    # overwrtiting from frame till the end
+    for j in range(frame, len(tj)):
         sim.run()
         tj[j] = sim.system
     return tj
 
-def shootBackward(sim, tj, slice):
+def shoot_backward(sim, tj, frame):
     """
-    Perform a backward shooting move: from a selected slice, randomise
+    Perform a backward shooting move: from a selected frame, randomise
     the velocities and integrate a new piece of trajectory backward in
     time.
     """
     log.debug('tps shoot backward')
-    sim.system = tj[slice]
-    sim.system.temperature = sim.thermostat_temperature
+    sim.system = tj[frame]
+    # sim.system.set_temperature(sim.temperature)
     # !!!
-    # WARNING: TIME REVERSAL MISSING
-    #can/should i reverse time?
-    for j in range(slice-1, -1, -1):
+    # Possible issue with time reversal
+    
+    for j in range(frame-1, -1, -1):
         sim.run()
         tj[j] = sim.system
     return tj
 
-def shiftForward(sim, tj, slice):
+def shift_forward(sim, tj, frame):
     """
-    Perform a forward shifting move: delete a piece of trajectory
-    starting from slice reverse the order of the trajectory and
+    Perform a _forward shifting move: delete a piece of trajectory
+    starting from frame reverse the order of the trajectory and
     continue the trajectory for the missing bit on the other end.
     """
-    log.debug('tps shift forward')
-    trajectoryLength = len(tj)
+    log.debug('tps shift _forward')
+    last = len(tj)
     copytj = TrajectoryRam()
     # reverse copy
-    for i in range(trajectoryLength-slice-1, -1, -1):
-        copytj[(trajectoryLength-slice)-i] = tj[i]
+    for i in range(last-frame-1, -1, -1):
+        copytj[(last-frame)-i] = tj[i]
 
     # !!!
-    # WARNING: TIME REVERSAL MISSING
-    #can/should i reverse time?
+    # Possible issue with time reversal
+    
     sim.system = copytj[-1]
-    sim.system.temperature = sim.thermostat_temperature
-    for j in range(slice, trajectoryLength, 1):
+
+    for j in range(frame, last, 1):
         sim.run()
         copytj[j] = sim.system
     return copytj
 
-def shiftBackward(sim, tj, slice):
+def shift_backward(sim, tj, frame):
     """
-    Perform a forward shifting move: delete a piece of trajectory
-    before slice, keep the order of the trajectory and continue the
+    Perform a _forward shifting move: delete a piece of trajectory
+    before frame, keep the order of the trajectory and continue the
     trajectory for the missing bit on the other end.
     """
     log.debug('tps shift backward')
-    trajectoryLength = len(tj)
+    last = len(tj)
     copytj=TrajectoryRam()
-    # forward copy
-    for i in range(slice, trajectoryLength, 1):
-        copytj[i-slice] = tj[i]
+    # _forward copy
+    for i in range(frame, last, 1):
+        copytj[i-frame] = tj[i]
 
     # continue from the end
     sim.system = copytj[-1]
     # TODO: we should reassign from the thermostat temperature like
-    # sim.system.set_temperature(sim.system.thermostat.temperature)
-    sim.system.temperature = sim.thermostat_temperature
-    for j in range(slice):
+    
+    # sim.system.set_temperature(sim.temperature)
+    for j in range(frame):
         sim.run()
-        copytj[j+(trajectoryLength-slice)] = sim.system
+        copytj[j+(last-frame)] = sim.system
     return copytj
 
 
 def generate_trial(sim, tj, ratio):
     """
     Generate a new trial trajectory:
-    - select a random number to choose between forward and backward
+    - select a random number to choose between _forward and backward
       moves
     - decide then whether to shoot or to shift the trajectory
     - return the trial trajectory
     """
     r=np.random.uniform(0,1)
     if r<0.5:
-    #forward
+    #_forward
         shoot = 2.*r < ratio
         if shoot:
-            trial=shootForward(sim, tj, secondHalf(tj))
+            trial=shoot_forward(sim, tj, second_half(tj))
         else:
-            trial=shiftForward(sim, tj,firstHalf(tj))
+            trial=shift_forward(sim, tj,first_half(tj))
     else:
     #backward
         shoot = 2.*(r-.5) < ratio
         if shoot:
-            trial=shootBackward(sim, tj, firstHalf(tj))
+            trial=shoot_backward(sim, tj, first_half(tj))
         else:
-            trial=shiftBackward(sim, tj, secondHalf(tj))
+            trial=shift_backward(sim, tj, second_half(tj))
     return trial
 
 def update(trajectory, attempt):
@@ -213,14 +213,14 @@ class TransitionPathSampling(Simulation):
     version = '%s+%s (%s)' % (__version__, __commit__, __date__)
 
     def __init__(self, sim, temperature, steps=0, output_path=None,
-                 slices=2, k=0.01, biasing_field=0.0, restart=False):
+                 frames=2, k=0.01, biasing_field=0.0, restart=False):
         """
         Construct a tps instance that will run for `steps` iterations.
         
         - `sim` is either a Simulation instance or a list / tuple of
           Simulation instances.
         - `temperature` is the thermostat temperature
-        - `slices` is the number of subtrajectories used to compute
+        - `frames` is the number of subtrajectories used to compute
         the order parameter
         - `k` is the spring constant for the umbrellas if there is
         more than one `sim` instances
@@ -234,11 +234,11 @@ class TransitionPathSampling(Simulation):
             self.sim = sim
         # Note: the number of steps of the backend is set upon construction
         self.temperature = temperature
-        self.biasing_field = [biasing_field] * len(sim)
+        self.biasing_field = [biasing_field] * len(self.sim)
         # Umbrellas parameters
         self.k = k  # spring constant
         self.umbrellas = range(len(self.sim))  # order parameters
-        self.slices = slices
+        self.frames = frames
 
         # Trajectories objects, one per simulation instance.
         # They will have 0 frames each.
@@ -280,12 +280,12 @@ class TransitionPathSampling(Simulation):
                 # TODO: DC this one is not necessary here, the backend has it already
                 self.sim[i].system = copy(self.inp[i][0])  # copy() might not be necessary here
                 # TODO: fix this hack
-                self.sim[i].thermostat_temperature = self.temperature
+                # self.sim[i].system.thermostat.temperature = self.temperature
                 self.sim[i].run()
                 # Trajectory frame assignement takes care of copying, so copy() is not necessary here
                 self.trj[i][0] = self.sim[i].system
                 # Run 0
-                for j in range(1, self.slices):
+                for j in range(1, self.frames):
                     self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
                     self.sim[i].run()
                     self.trj[i][j] = self.sim[i].system

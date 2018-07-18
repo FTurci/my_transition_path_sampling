@@ -5,6 +5,7 @@
 import numpy as np
 from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation, target_rmsd, write_thermo, write_config
+from atooms.system import Thermostat
 from atooms.backends.lammps import LAMMPS
 from atooms.core.utils import setup_logging
 from atooms.transition_path_sampling import core, TransitionPathSampling
@@ -44,8 +45,8 @@ def write_thermo_tps(sim):
             fh.write('%d %s\n' % (sim.current_step, q))
 
 nsim = 1
-t_obs = 2.
-dt = 0.004
+t_obs = 300.
+dt = 0.005
 T = 0.6
 
 file_inp = 'data/ka_rho1.2_T0.6.xyz'
@@ -57,8 +58,8 @@ pair_coeff      2 2 0.5 0.88 2.2
 neighbor        0.3 bin
 neigh_modify    every 20 delay 0 check no
 velocity        all create {0} 12345
-fix             1 all nvt temp {0} {0} 100.0
-# fix             1 all nve
+#fix             1 all nvt temp {0} {0} 100.0
+fix             1 all nve
 
 thermo  1   
 timestep        {1}
@@ -80,7 +81,9 @@ timestep        {1}
 #     thd.write(equilibrator.system,step=0)
 
 sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(t_obs/dt)) for i in range(nsim)]
-tps = TransitionPathSampling(sim, output_path='output', temperature=0.8, steps=10, slices=60, biasing_field=0.0)
+tps = TransitionPathSampling(sim, output_path='output', temperature=T, steps=10, frames=200, biasing_field=0.0)
+for s in tps.sim:
+    s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)
 core.calculate_order_parameter = mobility
 tps.run()

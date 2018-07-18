@@ -68,7 +68,7 @@ class Test(unittest.TestCase):
 
     def test_shoot_shift(self):
         n = 1
-        slices = 10
+        frames = 10
         fileinp = 'data/ka_rho1.2.xyz'
         bck = [DryRun() for i in range(n)]
         # TODO: temporarily needed by tps, should be removed
@@ -76,19 +76,19 @@ class Test(unittest.TestCase):
             b.fileinp = fileinp
         sim = [Simulation(bck[i], steps=10) for i in range(n)]
         from atooms.transition_path_sampling import core
-        from atooms.transition_path_sampling.core import shiftBackward, shiftForward, \
-            shootBackward, shootForward, firstHalf, secondHalf
+        from atooms.transition_path_sampling.core import shift_backward, shift_forward, \
+            shoot_backward, shoot_forward, first_half, second_half
         def test_order(t):
-            self.assertEqual(len(t), slices)
+            self.assertEqual(len(t), frames)
             return len(t)
         core.calculate_order_parameter = test_order
-        tps = TransitionPathSampling(sim, temperature=0.8, steps=1, slices=slices)
+        tps = TransitionPathSampling(sim, temperature=0.8, steps=1, frames=frames)
         tps.run()
         nt = len(tps.trj[0])
-        self.assertEqual(nt, len(shiftBackward(tps.sim[0], tps.trj[0], firstHalf(tps.trj[0]))))
-        self.assertEqual(nt, len(shootBackward(tps.sim[0], tps.trj[0], secondHalf(tps.trj[0]))))
-        self.assertEqual(nt, len(shiftForward(tps.sim[0], tps.trj[0], firstHalf(tps.trj[0]))))
-        self.assertEqual(nt, len(shootForward(tps.sim[0], tps.trj[0], secondHalf(tps.trj[0]))))
+        self.assertEqual(nt, len(shift_backward(tps.sim[0], tps.trj[0], first_half(tps.trj[0]))))
+        self.assertEqual(nt, len(shoot_backward(tps.sim[0], tps.trj[0], second_half(tps.trj[0]))))
+        self.assertEqual(nt, len(shift_forward(tps.sim[0], tps.trj[0], first_half(tps.trj[0]))))
+        self.assertEqual(nt, len(shoot_forward(tps.sim[0], tps.trj[0], second_half(tps.trj[0]))))
 
 if __name__ == '__main__':
     unittest.main(verbosity=0)
