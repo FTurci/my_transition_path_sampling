@@ -163,6 +163,8 @@ def mc_step(simulation, trajectory, biasing_field, ratio=0.25):
     """
     # generate trial trajectory
     q_old = calculate_order_parameter(trajectory)
+    simulation.order_parameter = q_old
+
     attempt = generate_trial(simulation, trajectory, ratio)
     q_new = calculate_order_parameter(attempt)
     p = np.exp(-(q_new-q_old) * biasing_field)
@@ -171,6 +173,7 @@ def mc_step(simulation, trajectory, biasing_field, ratio=0.25):
         log.debug('tps accept move bias=%s p=%s', q_new, p)
         # accept, overwrite the relevant part of trajectory
         update(trajectory,attempt)
+        simulation.order_parameter = q_new
     else:
         # reject, i.e. do nothing
         pass

@@ -41,18 +41,19 @@ def write_thermo_tps(sim):
             fh.write('# columns: steps, order parameter, normalized order parameter\n')
     else:
         q = sim.sim[0].order_parameter
+        print  "q ",q
         #q = core.calculate_order_parameter(sim.trj[i])
         with open(f, 'a') as fh:
-            fh.write('%d %s %s\n' % (sim.current_step, q, q / len(sim.sim[0].system.particle)))
+            fh.write('%d %g %g\n' % (sim.current_step, q, q / len(sim.sim[0].system.particle)))
 
 nsim = 1
 dt = 0.005
-frames = 200
-t_obs = 300.0 # 10000 * dt
+frames = 3
+t_obs = 100.0 # 10000 * dt
 delta_t = t_obs / frames
 T = 0.6
 
-file_inp = 'data/ka_rho1.2_T0.6.xyz'
+file_inp = 'data/ka_rho1.2_N150_T0.6.xyz'
 cmd = """
 pair_style      lj/cut 2.5
 pair_coeff      1 1 1.0 1.0  2.5
