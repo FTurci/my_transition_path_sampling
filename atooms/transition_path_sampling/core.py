@@ -29,7 +29,7 @@ def shoot_forward(sim, tj, frame):
     """
     log.debug('tps shoot forward')
     sim.system = tj[frame]
-    # sim.system.set_temperature(sim.temperature)
+    sim.system.set_temperature(sim.temperature)
 
     # overwrtiting from frame till the end
     for j in range(frame, len(tj)):
@@ -45,7 +45,7 @@ def shoot_backward(sim, tj, frame):
     """
     log.debug('tps shoot backward')
     sim.system = tj[frame]
-    # sim.system.set_temperature(sim.temperature)
+    sim.system.set_temperature(sim.temperature)
     # !!!
     # Possible issue with time reversal
     
@@ -257,6 +257,7 @@ class TransitionPathSampling(Simulation):
         self.bias = np.zeros(len(self.sim))
         for sim in self.sim:
             sim.order_parameter = None
+            sim.temperature = self.temperature
 
         # TODO: should we set self.backend to None??
         # TODO: might be needed for PT
