@@ -69,7 +69,7 @@ def shift_forward(sim, tj, frame):
 
     # !!!
     # Possible issue with time reversal
-    
+    # sim.system.set_temperature(sim.temperature)
     sim.system = copytj[-1]
 
     for j in range(frame, last, 1):
@@ -128,7 +128,8 @@ def generate_trial(sim, tj, ratio):
 
 def update(trajectory, attempt):
     for i in range(len(attempt)):
-        trajectory[i] = attempt[i]
+        # trajectory[i] = attempt[i]
+        pass
     # trajectory=attempt # does this work? should I also couple the simulation object?
 
 def calculate_order_parameter(attempt):
@@ -147,7 +148,7 @@ def setup(bias, simulations, trajectories, umbrellas, k):
     for i in range(len(simulations)):
         bias[i] = calculate_bias(trajectories[i], umbrellas[i], k)
 
-def mc_step(simulation, trajectory, biasing_field, ratio=0.25):
+def mc_step(simulation, trajectory, biasing_field,ratio=0.25):
     """
     Perform a Monte-Carlo step in trajectory space.
 
@@ -162,8 +163,7 @@ def mc_step(simulation, trajectory, biasing_field, ratio=0.25):
     It returns nothing, but it should update the trajectory and the bias.
     """
     # generate trial trajectory
-    q_old = calculate_order_parameter(trajectory)
-    simulation.order_parameter = q_old
+    q_old = simulation.order_parameter 
 
     attempt = generate_trial(simulation, trajectory, ratio)
     q_new = calculate_order_parameter(attempt)
@@ -174,11 +174,10 @@ def mc_step(simulation, trajectory, biasing_field, ratio=0.25):
         # accept, overwrite the relevant part of trajectory
         update(trajectory,attempt)
         simulation.order_parameter = q_new
-    else:
-        # reject, i.e. do nothing
-        pass
+        return 1.0
 
-    return 0.0
+    else:
+        return 0.0
 
 def mc_step_umbrella(simulation, trajectory, umbrella, k, bias, ratio=0.25):
     """
@@ -203,13 +202,11 @@ def mc_step_umbrella(simulation, trajectory, umbrella, k, bias, ratio=0.25):
         log.debug('tps accept move bias=%s p=%s', attempt_bias, p)
         # accept, overwrite the relevant part of trajectory
         update(trajectory,attempt)
-        bias = attempt_bias
+        
+        return 1.0
     else:
         # reject, i.e. do nothing
-        pass
-
-    return bias
-
+        return 0.0
 
 class TransitionPathSampling(Simulation):
 
@@ -242,6 +239,7 @@ class TransitionPathSampling(Simulation):
         self.k = k  # spring constant
         self.umbrellas = range(len(self.sim))  # order parameters
         self.frames = frames
+        self.acceptance = 0.0
 
         # Trajectories objects, one per simulation instance.
         # They will have 0 frames each.
@@ -258,7 +256,7 @@ class TransitionPathSampling(Simulation):
         for sim in self.sim:
             sim.order_parameter = None
             sim.temperature = self.temperature
-
+# 
         # TODO: should we set self.backend to None??
         # TODO: might be needed for PT
         # Make sure base directories exist
@@ -277,35 +275,46 @@ class TransitionPathSampling(Simulation):
         # for the running steps. Let's see how it goes...
         # Or even we could have a local logging instance as self.log which can be muted on a per simulation basis
 
+        
         # TODO: FT initialise trajectories: more elegant way?
         if self.current_step == 0:
+            print "# Generating first trajectory..."
             for i in range(len(self.sim)):
                 #frame 0:
                 # TODO: DC this one is not necessary here, the backend has it already
+                
                 self.sim[i].system = copy(self.inp[i][0])  # copy() might not be necessary here
+                
                 # TODO: fix this hack
                 # self.sim[i].system.thermostat.temperature = self.temperature
-                self.sim[i].run()
+                # self.sim[i].run()
                 # Trajectory frame assignement takes care of copying, so copy() is not necessary here
                 self.trj[i][0] = self.sim[i].system
                 # Run 0
                 for j in range(1, self.frames):
-                    self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
+                    # self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
                     self.sim[i].run()
                     self.trj[i][j] = self.sim[i].system
-                #sim[i].order_parameter = calculate_order_parameter(trj[i])
+
+                q_old = calculate_order_parameter(self.trj[i])
+                sim[i].order_parameter = q_old
                     
             # TPS simulation
             # calculating the value of the initial potential
             setup(self.bias, self.sim, self.trj, self.umbrellas, self.k)
             log.debug("tps bias after initialisation %s", self.bias)
 
+
         for k in range(steps - self.current_step):
             log.info('tps step %s', self.current_step + k)
+           
             # We might have several replicas of simulations with different parameters
             for i in range(len(self.sim)): # FT: to be distributed?
-                self.bias[i] = mc_step(self.sim[i], self.trj[i], self.biasing_field[i])
+                self.sim[i].system.set_temperature(self.temperature)
+                self.acceptance += mc_step(self.sim[i], self.trj[i], self.biasing_field[i])
+                # print "    p_acc", self.acceptance/(self.current_step+1.0)
 
+                
         # Its up to us to update our steps
         self.current_step = steps
 

@@ -11,6 +11,7 @@ from atooms.core.utils import setup_logging
 from atooms.transition_path_sampling import core, TransitionPathSampling
 from atooms.trajectory import TrajectoryXYZ
 
+
 setup_logging(name='atooms.simulation', level=40)  # 20 is verbose, 40 just warnings
 setup_logging(name='transition_path_sampling', level=40)
 
@@ -20,17 +21,20 @@ def self_overlap(r0, r1, side, a_square):
     qij = rij.flatten() < a_square
     return qij.sum()
 
+
 def mobility(t):
     # Note: the trajectory must be unfolded
-    pos = [s.dump('pos') for s in Unfolded(t, fixed_cm=True)]
+    # pos = [s.dump('pos') for s in ]
     side = t[0].cell.side
-    a = 0.3
-    s = 0
     K = 0
+    unfoldedtj = Unfolded(t, fixed_cm=True)
+    pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
-        K += np.sum((pos[j] - pos[j-1])**2)
-        #s += self_overlap(pos[j], pos[j-1], side, a**2)
-    print ('# tps C=%s [len=%s]' % (K, len(t)))
+        pos_1 = unfoldedtj[j].dump('pos')
+        K += np.sum((pos_1 - pos_0)**2)
+        pos_0 = pos_1
+
+    print ('# tps K=%s [len=%s]' % (K, len(t)))
     return K
 
 def write_thermo_tps(sim):
@@ -41,16 +45,17 @@ def write_thermo_tps(sim):
             fh.write('# columns: steps, order parameter, normalized order parameter\n')
     else:
         q = sim.sim[0].order_parameter
-        print  "q ",q
         #q = core.calculate_order_parameter(sim.trj[i])
         with open(f, 'a') as fh:
             fh.write('%d %g %g\n' % (sim.current_step, q, q / len(sim.sim[0].system.particle)))
 
 nsim = 1
 dt = 0.005
-frames = 3
-t_obs = 100.0 # 10000 * dt
-delta_t = t_obs / frames
+frames = 60
+delta_t = 1.5
+t_obs = delta_t*frames
+print "# t_obs",t_obs
+print "# granularity delta_t ", delta_t
 T = 0.6
 
 file_inp = 'data/ka_rho1.2_N150_T0.6.xyz'
@@ -61,7 +66,7 @@ pair_coeff      1 2 1.5 0.8  2.0
 pair_coeff      2 2 0.5 0.88 2.2
 neighbor        0.3 bin
 neigh_modify    every 20 delay 0 check no
-velocity        all create {0} 12345
+#velocity        all create {0} 12345
 #fix             1 all nvt temp {0} {0} 100.0
 fix             1 all nve
 timestep        {1}
@@ -84,8 +89,13 @@ field = float(sys.argv[1])
 # with TrajectoryXYZ(file_inp+"_equilibration.xyz", 'w') as thd:
 #     thd.write(equilibrator.system,step=0)
 
-sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(round(delta_t / dt))) for i in range(nsim)]
-tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=frames, biasing_field=field)
+# sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(round(delta_t / dt)) ) for i in range(nsim)]
+sim= []
+for i in range(nsim):
+    lmp = LAMMPS(file_inp, cmd)
+    lmp.verbose = True
+    sim.append(Simulation(lmp, steps=int(round(delta_t / dt)) ) )
+tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=100, frames=frames, biasing_field=field)
 for s in tps.sim:
     s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)
