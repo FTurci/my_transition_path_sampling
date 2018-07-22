@@ -29,6 +29,7 @@ def shoot_forward(sim, tj, frame):
     """
     log.debug('tps shoot forward')
     sim.system = tj[frame]
+    # We completely reshuffle the velocities, which is a big perturbation...
     sim.system.set_temperature(sim.temperature)
 
     # overwrtiting from frame till the end
@@ -69,7 +70,7 @@ def shift_forward(sim, tj, frame):
 
     # !!!
     # Possible issue with time reversal
-    # sim.system.set_temperature(sim.temperature)
+    sim.system.set_temperature(sim.temperature)
     sim.system = copytj[-1]
 
     for j in range(frame, last, 1):
@@ -92,9 +93,8 @@ def shift_backward(sim, tj, frame):
 
     # continue from the end
     sim.system = copytj[-1]
-    # TODO: we should reassign from the thermostat temperature like
-    
-    # sim.system.set_temperature(sim.temperature)
+    #
+    sim.system.set_temperature(sim.temperature)
     for j in range(frame):
         sim.run()
         copytj[j+(last-frame)] = sim.system

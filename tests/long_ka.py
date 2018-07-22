@@ -93,9 +93,9 @@ field = float(sys.argv[1])
 sim= []
 for i in range(nsim):
     lmp = LAMMPS(file_inp, cmd)
-    lmp.verbose = True
+    lmp.verbose = False
     sim.append(Simulation(lmp, steps=int(round(delta_t / dt)) ) )
-tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=100, frames=frames, biasing_field=field)
+tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=frames, biasing_field=field)
 for s in tps.sim:
     s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)
