@@ -58,6 +58,9 @@ print "# t_obs",t_obs
 print "# granularity delta_t ", delta_t
 T = 0.6
 
+tau ={0.6:21.5}
+print "t_obs/tau", t_obs/tau[T]
+
 file_inp = 'data/ka_rho1.2_N150_T0.6.xyz'
 cmd = """
 pair_style      lj/cut 2.5
@@ -95,7 +98,7 @@ for i in range(nsim):
     lmp = LAMMPS(file_inp, cmd)
     lmp.verbose = False
     sim.append(Simulation(lmp, steps=int(round(delta_t / dt)) ) )
-tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=frames, biasing_field=field)
+tps = TransitionPathSampling(sim, output_path='output_tobs%g_s%g.'%(t_obs,field), temperature=T, steps=10000, frames=frames, biasing_field=field)
 for s in tps.sim:
     s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)

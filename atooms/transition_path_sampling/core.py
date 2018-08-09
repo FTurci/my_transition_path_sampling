@@ -71,7 +71,7 @@ def shift_forward(sim, tj, frame):
 
     sim.system = copytj[-1]
     #velocity reversal
-    for p in system.particle: 
+    for p in sim.system.particle: 
         p.velocity *= -1 
 
     #Uncomment if thermalisation needed
