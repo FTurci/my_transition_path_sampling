@@ -68,11 +68,15 @@ def shift_forward(sim, tj, frame):
     for i in range(last-frame-1, -1, -1):
         copytj[(last-frame)-i] = tj[i]
 
-    # !!!
-    # Possible issue with time reversal
-    sim.system.set_temperature(sim.temperature)
-    sim.system = copytj[-1]
 
+    sim.system = copytj[-1]
+    #velocity reversal
+    for p in system.particle: 
+        p.velocity *= -1 
+
+    #Uncomment if thermalisation needed
+    #sim.system.set_temperature(sim.temperature)
+    
     for j in range(frame, last, 1):
         sim.run()
         copytj[j] = sim.system
@@ -80,7 +84,7 @@ def shift_forward(sim, tj, frame):
 
 def shift_backward(sim, tj, frame):
     """
-    Perform a _forward shifting move: delete a piece of trajectory
+    Perform a _backward shifting move: delete a piece of trajectory
     before frame, keep the order of the trajectory and continue the
     trajectory for the missing bit on the other end.
     """
@@ -93,8 +97,8 @@ def shift_backward(sim, tj, frame):
 
     # continue from the end
     sim.system = copytj[-1]
-    #
-    sim.system.set_temperature(sim.temperature)
+    # uncomment if thermalisation is needed
+    #sim.system.set_temperature(sim.temperature)
     for j in range(frame):
         sim.run()
         copytj[j+(last-frame)] = sim.system
