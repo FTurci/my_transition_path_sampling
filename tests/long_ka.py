@@ -3,6 +3,7 @@
 """Test TPS simulation for KA mixture."""
 
 import numpy as np
+import sys
 from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation, target_rmsd, write_thermo, write_config
 from atooms.system import Thermostat
@@ -42,22 +43,26 @@ def write_thermo_tps(sim):
     f = sim.output_path + 'thermo'
     if sim.current_step == 0:
         with open(f, 'w') as fh:
-            fh.write('# columns: steps, order parameter, normalized order parameter\n')
+            fh.write('# columns: steps, order parameter\n')
     else:
         q = sim.sim[0].order_parameter
         #q = core.calculate_order_parameter(sim.trj[i])
         with open(f, 'a') as fh:
-            fh.write('%d %g %g\n' % (sim.current_step, q, q / len(sim.sim[0].system.particle)))
+            fh.write('%d %g\n' % (sim.current_step, q))
 
+def restart_from(iteration, folder="."):
+  with TrajectoryXYZ("tj%s"%iteration) as tj:
+    
 nsim = 1
 dt = 0.005
-frames = 60
+field = float(sys.argv[1])
+frames = int(sys.argv[2])
+restart = False if len(sys.argv)==3 else int(sys.argv[3])
 delta_t = 1.5
 t_obs = delta_t*frames
 print "# t_obs",t_obs
 print "# granularity delta_t ", delta_t
 T = 0.6
-
 tau ={0.6:21.5}
 print "t_obs/tau", t_obs/tau[T]
 
@@ -75,8 +80,8 @@ fix             1 all nve
 timestep        {1}
 """.format(T, dt)
 
-import sys
-field = float(sys.argv[1])
+
+
 # Initial equilibration
 # equiibration_rmsd = 0.1
 # check_frequency = 100 #steps
@@ -91,14 +96,18 @@ field = float(sys.argv[1])
 # write final configuration
 # with TrajectoryXYZ(file_inp+"_equilibration.xyz", 'w') as thd:
 #     thd.write(equilibrator.system,step=0)
-
 # sim = [Simulation(LAMMPS(file_inp, cmd), steps=int(round(delta_t / dt)) ) for i in range(nsim)]
+
 sim= []
-for i in range(nsim):
-    lmp = LAMMPS(file_inp, cmd)
-    lmp.verbose = False
-    sim.append(Simulation(lmp, steps=int(round(delta_t / dt)) ) )
-tps = TransitionPathSampling(sim, output_path='output_tobs%g_s%g.'%(t_obs,field), temperature=T, steps=10000, frames=frames, biasing_field=field)
+if restart ==False:
+  for i in range(nsim):
+      lmp = LAMMPS(file_inp, cmd)
+      lmp.verbose = False
+      sim.append(Simulation(lmp, steps=int(round(delta_t / dt)) ) )
+else:
+  for i in range (nsim):
+    sim.append(restart_from(restart))
+tps = TransitionPathSampling(sim, output_path='output_tobs%g_s%g.'%(t_obs,field), temperature=T, steps=100000, frames=frames, biasing_field=field)
 for s in tps.sim:
     s.system.thermostat = Thermostat(T)
 tps.add(write_thermo_tps, 1)

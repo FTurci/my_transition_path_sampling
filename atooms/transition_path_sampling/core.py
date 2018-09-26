@@ -132,8 +132,8 @@ def generate_trial(sim, tj, ratio):
 
 def update(trajectory, attempt):
     for i in range(len(attempt)):
-        # trajectory[i] = attempt[i]
-        pass
+        trajectory[i] = attempt[i]
+        #pass
     # trajectory=attempt # does this work? should I also couple the simulation object?
 
 def calculate_order_parameter(attempt):
@@ -270,7 +270,7 @@ class TransitionPathSampling(Simulation):
     def __str__(self):
         return 'Transition path sampling'
 
-    def run_until(self, steps):
+    def run_until(self, steps,trajectory_snapshot=1):
         # just shortcuts
         sim, trj = self.sim, self.trj
 
@@ -310,8 +310,13 @@ class TransitionPathSampling(Simulation):
 
 
         for k in range(steps - self.current_step):
-            log.info('tps step %s', self.current_step + k)
-           
+            step = self.current_step + k
+            log.info('tps step %s', step)
+            if step%trajectory_snapshot==0:
+              for i in range(len(sim)):
+                with TrajectoryXYZ('tj%s.xyz'%step,'w',fields=['position']) as th:
+                  for frame in range(len(trj[i])):
+                    th.write(trj[i][frame],step = frame)
             # We might have several replicas of simulations with different parameters
             for i in range(len(self.sim)): # FT: to be distributed?
                 self.sim[i].system.set_temperature(self.temperature)
