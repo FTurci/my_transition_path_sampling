@@ -52,7 +52,7 @@ def write_thermo_tps(sim):
 
 def restart_from(iteration, folder="."):
   with TrajectoryXYZ("tj%s"%iteration) as tj:
-    
+    pass 
 nsim = 1
 dt = 0.005
 field = float(sys.argv[1])
