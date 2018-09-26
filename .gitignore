@@ -13,5 +13,5 @@ cover
 _commit.py
 MANIFEST
 *.egg-info
-
+tj*
 log.lammps
