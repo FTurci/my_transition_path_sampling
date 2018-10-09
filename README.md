@@ -43,7 +43,7 @@ pip install transition_path_sampling
 
 Alternately, you can clone the code repository and install from source
 ```
-git clone git@gitlab.info-ufr.univ-montp2.fr:daniele.coslovich/atooms/transition_path_sampling.git
+git clone https://gitlab.info-ufr.univ-montp2.fr/atooms/transition_path_sampling.git
 cd transition_path_sampling
 make install
 ```
