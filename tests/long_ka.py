@@ -67,8 +67,6 @@ pair_coeff      2 2 0.5 0.88 2.2
 neighbor        0.3 bin
 neigh_modify    every 20 delay 0 check no
 #velocity        all create {0} 12345
-#fix             1 all nvt temp {0} {0} 100.0
-fix             1 all nve
 timestep        {1}
 """.format(T, dt)
 
@@ -95,9 +93,9 @@ for i in range(nsim):
     lmp = LAMMPS(file_inp, cmd)
     lmp.verbose = False
     sim.append(Simulation(lmp, steps=int(round(delta_t / dt)) ) )
-tps = TransitionPathSampling(sim, output_path='output.s%g.'%field, temperature=T, steps=10000, frames=frames, biasing_field=field)
+tps = TransitionPathSampling(sim, output_path='output.s%g.' % field, temperature=T, steps=10000, frames=frames, biasing_field=field)
 for s in tps.sim:
-    s.system.thermostat = Thermostat(T)
+    s.system.thermostat = Thermostat(T, relaxation_time=10.0)
 tps.add(write_thermo_tps, 1)
 core.calculate_order_parameter = mobility
 tps.run()
