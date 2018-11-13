@@ -2,6 +2,7 @@
 
 import unittest
 
+import atooms.core
 from atooms.core.utils import setup_logging
 from atooms.simulation import Simulation
 from atooms.backends.dryrun import DryRun
@@ -15,6 +16,7 @@ except ImportError:
 
 setup_logging(name='atooms.simulation', level=40)  # 20 is verbose, 40 just warnings
 setup_logging(name='transition_path_sampling', level=20)
+atooms.core.progress.active = False
 
 class Test(unittest.TestCase):
 
@@ -22,10 +24,7 @@ class Test(unittest.TestCase):
         pass
 
     def test_dryrun(self):
-        fileinp = 'data/ka_rho1.2.xyz'
         bck = DryRun()
-        # TODO: temporarily needed by tps, should be removed
-        bck.fileinp = fileinp
         sim = Simulation(bck, steps=3)
         tps = TransitionPathSampling(sim, temperature=0.8, steps=1)
         tps.run()
