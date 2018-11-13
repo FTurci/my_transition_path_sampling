@@ -241,23 +241,16 @@ class TransitionPathSampling(Simulation):
         self.frames = frames
         self.acceptance = 0.0
 
-        # Trajectories objects, one per simulation instance.
-        # They will have 0 frames each.
+        # Internal trajectory objects, one per simulation instance
         self.trj = [TrajectoryRam() for i in range(len(self.sim))]
-        # Input trajectories,
-        # we only read the first frame to initialize the systems
-        # TODO: it should be possible to drop this
-        self.inp = [TrajectoryXYZ(self.sim[i].backend.fileinp) for i in range(len(self.sim))]
-        #self.inp = [TrajectoryXYZ('data/ka_rho1.2.xyz') for i in range(len(self.sim))]
 
-        # initial value of the bias (pseudopotential)
+        # Initial value of the bias (pseudopotential)
         # for every initial trajectory
         self.bias = np.zeros(len(self.sim))
         for sim in self.sim:
             sim.order_parameter = None
             sim.temperature = self.temperature
-# 
-        # TODO: should we set self.backend to None??
+
         # TODO: might be needed for PT
         # Make sure base directories exist
         # from atooms.core.utils import mkdir
@@ -267,28 +260,14 @@ class TransitionPathSampling(Simulation):
         return 'Transition path sampling'
 
     def run_until(self, steps):
-        # just shortcuts
+        # Just shortcuts
         sim, trj = self.sim, self.trj
 
-        # TODO: instead of run() we could use run_until() of sim[i], as we do in PT.
-        # This would avoid the verbose logging... but we should use an incremental variable
-        # for the running steps. Let's see how it goes...
-        # Or even we could have a local logging instance as self.log which can be muted on a per simulation basis
-
-        
-        # TODO: FT initialise trajectories: more elegant way?
+        # Initialize trajectories
         if self.current_step == 0:
-            print "# Generating first trajectory..."
+            log.debug("generating first trajectory")
             for i in range(len(self.sim)):
-                #frame 0:
-                # TODO: DC this one is not necessary here, the backend has it already
-                
-                self.sim[i].system = copy(self.inp[i][0])  # copy() might not be necessary here
-                
-                # TODO: fix this hack
-                # self.sim[i].system.thermostat.temperature = self.temperature
-                # self.sim[i].run()
-                # Trajectory frame assignement takes care of copying, so copy() is not necessary here
+                # Trajectory frame assignement takes care of copying
                 self.trj[i][0] = self.sim[i].system
                 # Run 0
                 for j in range(1, self.frames):
@@ -300,10 +279,9 @@ class TransitionPathSampling(Simulation):
                 sim[i].order_parameter = q_old
                     
             # TPS simulation
-            # calculating the value of the initial potential
+            # Calculate the value of the initial potential
             setup(self.bias, self.sim, self.trj, self.umbrellas, self.k)
             log.debug("tps bias after initialisation %s", self.bias)
-
 
         for k in range(steps - self.current_step):
             log.info('tps step %s', self.current_step + k)
@@ -312,10 +290,8 @@ class TransitionPathSampling(Simulation):
             for i in range(len(self.sim)): # FT: to be distributed?
                 self.sim[i].system.set_temperature(self.temperature)
                 self.acceptance += mc_step(self.sim[i], self.trj[i], self.biasing_field[i])
-                # print "    p_acc", self.acceptance/(self.current_step+1.0)
 
-                
-        # Its up to us to update our steps
+        # It's up to us to update our steps
         self.current_step = steps
 
     def _info_backend(self):
