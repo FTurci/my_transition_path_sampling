@@ -1,11 +1,17 @@
+import os
+import logging
 import numpy as np
+import atooms.core.progress
 from atooms.trajectory.decorators import Unfolded
 from atooms.simulation import Simulation
 from atooms.system import Thermostat
 from atooms.backends.lammps import LAMMPS
-from atooms.core.utils import setup_logging
+from atooms.core.utils import setup_logging, mkdir
 from atooms.transition_path_sampling import core, TransitionPathSampling
 from atooms.trajectory import TrajectoryXYZ
+
+
+log = logging.getLogger(__name__)
 
 
 def self_overlap(r0, r1, side, a_square):
@@ -31,17 +37,18 @@ def write_thermo_tps(sim):
     f = sim.output_path + '.thermo'
     if sim.current_step == 0:
         with open(f, 'w') as fh:
-            fh.write('# columns: steps, order parameter, normalized order parameter\n')
+            fh.write('# columns: steps, order parameter q, q / N, q / (N*t_obs)\n')
     else:
         q = sim.sim[0].order_parameter
-        #q = core.calculate_order_parameter(sim.trj[i])
         with open(f, 'a') as fh:
-            fh.write('%d %g %g\n' % (sim.current_step, q, q / len(sim.sim[0].system.particle)))
+            fh.write('%d %g %g %g\n' % (sim.current_step, q, q / (len(sim.sim[0].system.particle)),
+                                        q / (len(sim.sim[0].system.particle) * sim._tobs)))
 
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
          dt=0.005, frames=60, delta_t=-1.0, t_obs=-1.0, script='',
          verbose=False):
 
+    # Initial checks
     if input_file is None:
         raise ValueError('Provide input file')
 
@@ -49,9 +56,11 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         raise ValueError('Provide temperature')
 
     if verbose:
-        setup_logging(name='atooms.simulation', level=20)
-        setup_logging(name='transition_path_sampling', level=40)
+        setup_logging(name='atooms.simulation', level=40)
+        setup_logging(name='atooms.transition_path_sampling', level=20)
+        atooms.core.progress.active = False
 
+    # Define time intervals
     nsim = 1
     if delta_t > 0:
         t_obs = delta_t * frames
@@ -62,8 +71,6 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
 
     # Local dictionary to interpolate output path
     _db = locals()
-    for key in _db:
-        print('# {}: {}'.format(key, _db[key]))
 
     # Source lammps command
     import os
@@ -80,15 +87,13 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
             neighbor        0.3 bin
             neigh_modify    every 20 delay 0 check no
             #velocity        all create {0} 12345
-            #fix             1 all nvt temp {0} {0} 100.0
-            fix             1 all nve
             timestep        {1}
             """.format(T, dt)
         else:
             cmd = script
         
     # Prepare backends
-    sim= []
+    sim = []
     for i in range(nsim):
         lmp = LAMMPS(input_file, cmd)
         lmp.verbose = False
@@ -97,11 +102,20 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
     # Interpolate output path with input parameters
     # Ex.: output = 'output_s{field}_tobs{t_obs}'
     output = output.format(**_db)
+    mkdir(os.path.dirname(output))
+    
+    # Always log to file
+    setup_logging(filename=output + '.log', name='atooms.transition_path_sampling', level=20)
+    atooms.core.progress.active = False
+    # Report local parameters db
+    for key in _db:
+        log.info('{:12s}: {}'.format(key, _db[key]))
 
     # Setup and run TPS simulation
     tps = TransitionPathSampling(sim, output_path=output, temperature=T, steps=steps, frames=frames, biasing_field=field)
+    tps._tobs = t_obs
     for s in tps.sim:
-        s.system.thermostat = Thermostat(T)
+        s.system.thermostat = Thermostat(T, relaxation_time=10.0)
     tps.add(write_thermo_tps, 1)
     core.calculate_order_parameter = mobility
     tps.run()
