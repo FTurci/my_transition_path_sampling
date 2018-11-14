@@ -284,8 +284,7 @@ class TransitionPathSampling(Simulation):
             log.debug("tps bias after initialisation %s", self.bias)
 
         for k in range(steps - self.current_step):
-            log.info('tps step %s', self.current_step + k)
-           
+            log.debug('tps step %s', self.current_step + k)           
             # We might have several replicas of simulations with different parameters
             for i in range(len(self.sim)): # FT: to be distributed?
                 self.sim[i].system.set_temperature(self.temperature)
