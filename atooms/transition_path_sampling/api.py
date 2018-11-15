@@ -28,6 +28,7 @@ def mobility(t):
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
         pos_1 = unfoldedtj[j].dump('pos')
+        print j, sum((pos_1[0, :] - pos_0[0, :])**2)
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
     return K
@@ -45,7 +46,7 @@ def write_thermo_tps(sim):
                                         q / (len(sim.sim[0].system.particle) * sim._tobs)))
 
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
-         dt=0.005, frames=60, delta_t=-1.0, t_obs=-1.0, script='',
+         dt=0.005, frames=-1, delta_t=-1.0, t_obs=-1.0, script='',
          verbose=False):
 
     # Initial checks
@@ -62,18 +63,25 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
 
     # Define time intervals
     nsim = 1
-    if delta_t > 0:
+    if delta_t > 0 and frames > 0:
         t_obs = delta_t * frames
-    elif t_obs > 0:
+    elif t_obs > 0  and frames > 0:
         delta_t = t_obs / frames
+    elif t_obs > 0  and delta_t > 0:
+        frames = int(round(t_obs / delta_t))
     else:
-        raise ValueError('Provide delta_t or t_obs')
+        raise ValueError('Provide two parameters out of delta_t, t_obs, frames')
 
     # Local dictionary to interpolate output path
     _db = locals()
 
+    # Interpolate output path with input parameters
+    # Ex.: output = 'output_s{field}_tobs{t_obs}'
+    output = output.format(**_db)
+    _db['output'] = output
+    mkdir(os.path.dirname(output))
+
     # Source lammps command
-    import os
     if os.path.exists(script):
         cmd = open(script).read()
     else:
@@ -99,17 +107,14 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         lmp.verbose = False
         sim.append(Simulation(lmp, steps=int(round(delta_t / dt))))
 
-    # Interpolate output path with input parameters
-    # Ex.: output = 'output_s{field}_tobs{t_obs}'
-    output = output.format(**_db)
-    mkdir(os.path.dirname(output))
-    
     # Always log to file
     setup_logging(filename=output + '.log', name='atooms.transition_path_sampling', level=20)
     atooms.core.progress.active = False
     # Report local parameters db
     for key in _db:
         log.info('{:12s}: {}'.format(key, _db[key]))
+
+    dsa
 
     # Setup and run TPS simulation
     tps = TransitionPathSampling(sim, output_path=output, temperature=T, steps=steps, frames=frames, biasing_field=field)
