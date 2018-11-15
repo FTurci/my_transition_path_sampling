@@ -213,7 +213,8 @@ class TransitionPathSampling(Simulation):
     version = '%s+%s (%s)' % (__version__, __commit__, __date__)
 
     def __init__(self, sim, temperature, steps=0, output_path=None,
-                 frames=2, k=0.01, biasing_field=0.0, restart=False):
+                 frames=2, k=0.01, biasing_field=0.0, restart=False,
+                 shift_weight=1, shoot_weight=1):
         """
         Construct a tps instance that will run for `steps` iterations.
         
@@ -240,6 +241,9 @@ class TransitionPathSampling(Simulation):
         self.umbrellas = range(len(self.sim))  # order parameters
         self.frames = frames
         self.acceptance = 0.0
+        # Ratio of moves
+        self._ratio = [shift_weight / float(shoot_weight + shift_weight),
+                       shoot_weight / float(shoot_weight + shift_weight)]
 
         # Internal trajectory objects, one per simulation instance
         self.trj = [TrajectoryRam() for i in range(len(self.sim))]
@@ -288,7 +292,8 @@ class TransitionPathSampling(Simulation):
             # We might have several replicas of simulations with different parameters
             for i in range(len(self.sim)): # FT: to be distributed?
                 self.sim[i].system.set_temperature(self.temperature)
-                self.acceptance += mc_step(self.sim[i], self.trj[i], self.biasing_field[i])
+                self.acceptance += mc_step(self.sim[i], self.trj[i],
+                                           self.biasing_field[i], ratio=self._ratio)
 
         # It's up to us to update our steps
         self.current_step = steps

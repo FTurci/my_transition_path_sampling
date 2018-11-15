@@ -28,7 +28,6 @@ def mobility(t):
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
         pos_1 = unfoldedtj[j].dump('pos')
-        print j, sum((pos_1[0, :] - pos_0[0, :])**2)
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
     return K
@@ -47,7 +46,7 @@ def write_thermo_tps(sim):
 
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
          dt=0.005, frames=-1, delta_t=-1.0, t_obs=-1.0, script='',
-         verbose=False):
+         verbose=False, shift_weight=1, shoot_weight=1):
 
     # Initial checks
     if input_file is None:
@@ -114,10 +113,10 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
     for key in _db:
         log.info('{:12s}: {}'.format(key, _db[key]))
 
-    dsa
-
     # Setup and run TPS simulation
-    tps = TransitionPathSampling(sim, output_path=output, temperature=T, steps=steps, frames=frames, biasing_field=field)
+    tps = TransitionPathSampling(sim, output_path=output,
+                                 temperature=T, steps=steps, frames=frames, biasing_field=field,
+                                 shift_weight=1, shoot_weight=1)
     tps._tobs = t_obs
     for s in tps.sim:
         s.system.thermostat = Thermostat(T, relaxation_time=10.0)
