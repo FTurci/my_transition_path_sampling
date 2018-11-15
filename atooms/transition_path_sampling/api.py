@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 import atooms.core.progress
-from atooms.trajectory.decorators import Unfolded
+from atooms.trajectory.decorators import Unfolded, filter_species
 from atooms.simulation import Simulation
 from atooms.system import Thermostat
 from atooms.backends.lammps import LAMMPS
@@ -25,11 +25,13 @@ def mobility(t):
     side = t[0].cell.side
     K = 0
     unfoldedtj = Unfolded(t, fixed_cm=True)
+    unfoldedtj.add_callback(filter_species, '1')
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
         pos_1 = unfoldedtj[j].dump('pos')
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
+    t.callbacks.pop()
     return K
 
 def write_thermo_tps(sim):
@@ -98,7 +100,7 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
             """.format(T, dt)
         else:
             cmd = script
-        
+
     # Prepare backends
     sim = []
     for i in range(nsim):
@@ -123,4 +125,3 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
     tps.add(write_thermo_tps, 1)
     core.calculate_order_parameter = mobility
     tps.run()
-
