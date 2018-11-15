@@ -117,8 +117,10 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
 
     # Setup and run TPS simulation
     tps = TransitionPathSampling(sim, output_path=output,
-                                 temperature=T, steps=steps, frames=frames, biasing_field=field,
-                                 shift_weight=1, shoot_weight=1)
+                                 temperature=T, steps=steps,
+                                 frames=frames, biasing_field=field,
+                                 shift_weight=shift_weight,
+                                 shoot_weight=shoot_weight)
     tps._tobs = t_obs
     for s in tps.sim:
         s.system.thermostat = Thermostat(T, relaxation_time=10.0)

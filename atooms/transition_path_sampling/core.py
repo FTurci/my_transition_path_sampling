@@ -242,8 +242,8 @@ class TransitionPathSampling(Simulation):
         self.frames = frames
         self.acceptance = 0.0
         # Ratio of moves
-        self._ratio = [shift_weight / float(shoot_weight + shift_weight),
-                       shoot_weight / float(shoot_weight + shift_weight)]
+        self._ratio = [shoot_weight / float(shoot_weight + shift_weight),
+                       shift_weight / float(shoot_weight + shift_weight)]
 
         # Internal trajectory objects, one per simulation instance
         self.trj = [TrajectoryRam() for i in range(len(self.sim))]
@@ -293,7 +293,7 @@ class TransitionPathSampling(Simulation):
             for i in range(len(self.sim)): # FT: to be distributed?
                 self.sim[i].system.set_temperature(self.temperature)
                 self.acceptance += mc_step(self.sim[i], self.trj[i],
-                                           self.biasing_field[i], ratio=self._ratio)
+                                           self.biasing_field[i], ratio=self._ratio[0])
 
         # It's up to us to update our steps
         self.current_step = steps
