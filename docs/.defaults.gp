@@ -1,4 +1,4 @@
-
+# #+results:
 reset
     
 set term pngcairo font 'Helvetica, 9' #size 700,340
