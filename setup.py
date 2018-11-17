@@ -22,7 +22,7 @@ setup(name='transition_path_sampling',
       url='https://gitlab.info-ufr.univ-montp2.fr/daniele.coslovich/atooms/transition_path_sampling',
       packages=['atooms/transition_path_sampling'],
       license='GPLv3',
-      install_requires=['atooms>=1', 'argh'],
+      install_requires=['atooms>=1.8', 'argh'],
       scripts=['bin/tps.py'],
       classifiers=[
           'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
