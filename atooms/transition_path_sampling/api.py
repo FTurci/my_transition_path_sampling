@@ -46,9 +46,21 @@ def write_thermo_tps(sim):
             fh.write('%d %g %g %g\n' % (sim.current_step, q, q / (len(sim.sim[0].system.particle)),
                                         q / (len(sim.sim[0].system.particle) * sim._tobs)))
 
+def write_msd_tps(sim):
+    f = sim.output_path + '.xyz'
+    if sim.current_step == 0:
+        with open(f, 'w') as fh:
+            pass
+    with open(f, 'a') as fh:
+        fh.write('# step = %d\n' % (sim.current_step))
+        for s in Unfolded(sim.trj[0], fixed_cm=True):
+            fh.write('%g %g\n' % (s.particle[0].position[0], s.particle[0].velocity[0]))
+        fh.write('\n\n')
+
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
          dt=0.005, frames=-1, delta_t=-1.0, t_obs=-1.0, script='',
-         verbose=False, shift_weight=1, shoot_weight=1):
+         verbose=False, shift_weight=1, shoot_weight=1, debug=False,
+         trajectory_interval=0, thermo_interval=1):
 
     # Initial checks
     if input_file is None:
@@ -60,6 +72,11 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
     if verbose:
         setup_logging(name='atooms.simulation', level=40)
         setup_logging(name='atooms.transition_path_sampling', level=20)
+        atooms.core.progress.active = False
+
+    if debug:
+        setup_logging(name='atooms.simulation', level=40)
+        setup_logging(name='atooms.transition_path_sampling', level=10)
         atooms.core.progress.active = False
 
     # Define time intervals
@@ -124,6 +141,9 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
     tps._tobs = t_obs
     for s in tps.sim:
         s.system.thermostat = Thermostat(T, relaxation_time=10.0)
-    tps.add(write_thermo_tps, 1)
+    if thermo_interval > 0:
+        tps.add(write_thermo_tps, thermo_interval)
+    if trajectory_interval > 0:
+        tps.add(write_msd_tps, trajectory_interval)
     core.calculate_order_parameter = mobility
     tps.run()
