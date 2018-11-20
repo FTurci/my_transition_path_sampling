@@ -66,12 +66,17 @@ def shift_forward(sim, tj, frame):
     copytj = TrajectoryRam()
     # reverse copy
     for i in range(last-frame-1, -1, -1):
-        copytj[(last-frame)-i] = tj[i]
+        # copytj[(last-frame)-i] = tj[i]
+        system = tj[i]
+        for p in system.particle:
+            p.velocity *= -1
+        copytj[(last-frame)-i] = system
 
     # !!!
     # Possible issue with time reversal
-    sim.system.set_temperature(sim.temperature)
+    #sim.system.set_temperature(sim.temperature)
     sim.system = copytj[-1]
+    sim.system.set_temperature(sim.temperature)
 
     for j in range(frame, last, 1):
         sim.run()
@@ -128,9 +133,7 @@ def generate_trial(sim, tj, ratio):
 
 def update(trajectory, attempt):
     for i in range(len(attempt)):
-        # trajectory[i] = attempt[i]
-        pass
-    # trajectory=attempt # does this work? should I also couple the simulation object?
+        trajectory[i] = attempt[i]
 
 def calculate_order_parameter(attempt):
     # extensive in time (and space)
