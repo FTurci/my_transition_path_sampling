@@ -146,11 +146,6 @@ def calculate_bias(tj, umbrella, k):
     """Calculate the pseudo potential, from quadratic umbrellas."""
     return 0.5*k*(calculate_order_parameter(tj)-umbrella)
 
-def setup(bias, simulations, trajectories, umbrellas, k):
-    # TODO: umbrellas should be dict of params that we unpack into calculate_bias
-    for i in range(len(simulations)):
-        bias[i] = calculate_bias(trajectories[i], umbrellas[i], k)
-
 def mc_step(simulation, trajectory, biasing_field,ratio=0.25):
     """
     Perform a Monte-Carlo step in trajectory space.
@@ -221,8 +216,7 @@ class TransitionPathSampling(Simulation):
         """
         Construct a tps instance that will run for `steps` iterations.
         
-        - `sim` is either a Simulation instance or a list / tuple of
-          Simulation instances.
+        - `sim` is a Simulation instance
         - `temperature` is the thermostat temperature
         - `frames` is the number of subtrajectories used to compute
         the order parameter
@@ -231,32 +225,27 @@ class TransitionPathSampling(Simulation):
         """
         Simulation.__init__(self, DryRun(), output_path=output_path,
                             steps=steps, restart=restart)
-        # Non-pythonic check that sim is a list or tuple
-        if not (isinstance(sim, list) or isinstance(sim, tuple)):
-            self.sim = [sim]
-        else:
-            self.sim = sim
+        self.sim = sim
         # Note: the number of steps of the backend is set upon construction
         self.temperature = temperature
-        self.biasing_field = [biasing_field] * len(self.sim)
+        self.biasing_field = biasing_field
         # Umbrellas parameters
         self.k = k  # spring constant
-        self.umbrellas = range(len(self.sim))  # order parameters
+        self.umbrella = 0.0  # order parameters
         self.frames = frames
         self.acceptance = 0.0
         # Ratio of moves
         self._ratio = [shoot_weight / float(shoot_weight + shift_weight),
                        shift_weight / float(shoot_weight + shift_weight)]
 
-        # Internal trajectory objects, one per simulation instance
-        self.trj = [TrajectoryRam() for i in range(len(self.sim))]
+        # Internal trajectory object
+        self.trj = TrajectoryRam()
 
         # Initial value of the bias (pseudopotential)
-        # for every initial trajectory
-        self.bias = np.zeros(len(self.sim))
-        for sim in self.sim:
-            sim.order_parameter = None
-            sim.temperature = self.temperature
+        # for the initial trajectory
+        self.bias = 0.0 
+        self.sim.order_parameter = None
+        self.sim.temperature = self.temperature
 
         # TODO: might be needed for PT
         # Make sure base directories exist
@@ -273,36 +262,33 @@ class TransitionPathSampling(Simulation):
         # Initialize trajectories
         if self.current_step == 0:
             log.debug("generating first trajectory")
-            for i in range(len(self.sim)):
-                # Trajectory frame assignement takes care of copying
-                self.trj[i][0] = self.sim[i].system
-                # Run 0
-                for j in range(1, self.frames):
-                    # self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
-                    self.sim[i].run()
-                    self.trj[i][j] = self.sim[i].system
+            # Trajectory frame assignement takes care of copying
+            self.trj[0] = self.sim.system
+            # Run 0
+            for j in range(1, self.frames):
+                # self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
+                self.sim.run()
+                self.trj[j] = self.sim.system
 
-                q_old = calculate_order_parameter(self.trj[i])
-                sim[i].order_parameter = q_old
+            q_old = calculate_order_parameter(self.trj)
+            sim.order_parameter = q_old
                     
             # TPS simulation
             # Calculate the value of the initial potential
-            setup(self.bias, self.sim, self.trj, self.umbrellas, self.k)
+            self.bias = calculate_bias(self.trj, self.umbrella, self.k)
             log.debug("tps bias after initialisation %s", self.bias)
 
         for k in range(steps - self.current_step):
             log.debug('tps step %s', self.current_step + k)           
             # We might have several replicas of simulations with different parameters
-            for i in range(len(self.sim)): # FT: to be distributed?
-                self.sim[i].system.set_temperature(self.temperature)
-                self.acceptance += mc_step(self.sim[i], self.trj[i],
-                                           self.biasing_field[i], ratio=self._ratio[0])
+            self.sim.system.set_temperature(self.temperature)
+            self.acceptance += mc_step(self.sim, self.trj,
+                                       self.biasing_field, ratio=self._ratio[0])
 
         # It's up to us to update our steps
         self.current_step = steps
 
     def _info_backend(self):
-        txt = 'backend: %s' % self.sim[0]
+        txt = 'backend: %s' % self.sim
         txt += 'output path: %s' % self.output_path
-        txt += 'number of replicas: %d' % len(self.sim)
         return txt
