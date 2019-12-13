@@ -66,13 +66,17 @@ def shift_forward(sim, tj, frame):
     copytj = TrajectoryRam()
     # reverse copy
     for i in range(last-frame-1, -1, -1):
-        copytj[(last-frame)-i] = tj[i]
+        # copytj[(last-frame)-i] = tj[i]
+        system = tj[i]
+        for p in system.particle:
+            p.velocity *= -1
+        copytj[(last-frame)-i] = system
 
-
+    # !!!
+    # Possible issue with time reversal
+    #sim.system.set_temperature(sim.temperature)
     sim.system = copytj[-1]
-    #velocity reversal
-    for p in sim.system.particle: 
-        p.velocity *= -1 
+    sim.system.set_temperature(sim.temperature)
 
     #Uncomment if thermalisation needed
     #sim.system.set_temperature(sim.temperature)
@@ -133,8 +137,6 @@ def generate_trial(sim, tj, ratio):
 def update(trajectory, attempt):
     for i in range(len(attempt)):
         trajectory[i] = attempt[i]
-        #pass
-    # trajectory=attempt # does this work? should I also couple the simulation object?
 
 def calculate_order_parameter(attempt):
     # extensive in time (and space)
@@ -146,11 +148,6 @@ def calculate_order_parameter(attempt):
 def calculate_bias(tj, umbrella, k):
     """Calculate the pseudo potential, from quadratic umbrellas."""
     return 0.5*k*(calculate_order_parameter(tj)-umbrella)
-
-def setup(bias, simulations, trajectories, umbrellas, k):
-    # TODO: umbrellas should be dict of params that we unpack into calculate_bias
-    for i in range(len(simulations)):
-        bias[i] = calculate_bias(trajectories[i], umbrellas[i], k)
 
 def mc_step(simulation, trajectory, biasing_field,ratio=0.25):
     """
@@ -217,12 +214,12 @@ class TransitionPathSampling(Simulation):
     version = '%s+%s (%s)' % (__version__, __commit__, __date__)
 
     def __init__(self, sim, temperature, steps=0, output_path=None,
-                 frames=2, k=0.01, biasing_field=0.0, restart=False):
+                 frames=2, k=0.01, biasing_field=0.0, restart=False,
+                 shift_weight=1, shoot_weight=1):
         """
         Construct a tps instance that will run for `steps` iterations.
         
-        - `sim` is either a Simulation instance or a list / tuple of
-          Simulation instances.
+        - `sim` is a Simulation instance
         - `temperature` is the thermostat temperature
         - `frames` is the number of subtrajectories used to compute
         the order parameter
@@ -231,37 +228,28 @@ class TransitionPathSampling(Simulation):
         """
         Simulation.__init__(self, DryRun(), output_path=output_path,
                             steps=steps, restart=restart)
-        # Non-pythonic check that sim is a list or tuple
-        if not (isinstance(sim, list) or isinstance(sim, tuple)):
-            self.sim = [sim]
-        else:
-            self.sim = sim
+        self.sim = sim
         # Note: the number of steps of the backend is set upon construction
         self.temperature = temperature
-        self.biasing_field = [biasing_field] * len(self.sim)
+        self.biasing_field = biasing_field
         # Umbrellas parameters
         self.k = k  # spring constant
-        self.umbrellas = range(len(self.sim))  # order parameters
+        self.umbrella = 0.0  # order parameters
         self.frames = frames
         self.acceptance = 0.0
+        # Ratio of moves
+        self._ratio = [shoot_weight / float(shoot_weight + shift_weight),
+                       shift_weight / float(shoot_weight + shift_weight)]
 
-        # Trajectories objects, one per simulation instance.
-        # They will have 0 frames each.
-        self.trj = [TrajectoryRam() for i in range(len(self.sim))]
-        # Input trajectories,
-        # we only read the first frame to initialize the systems
-        # TODO: it should be possible to drop this
-        self.inp = [TrajectoryXYZ(self.sim[i].backend.fileinp) for i in range(len(self.sim))]
-        #self.inp = [TrajectoryXYZ('data/ka_rho1.2.xyz') for i in range(len(self.sim))]
+        # Internal trajectory object
+        self.trj = TrajectoryRam()
 
-        # initial value of the bias (pseudopotential)
-        # for every initial trajectory
-        self.bias = np.zeros(len(self.sim))
-        for sim in self.sim:
-            sim.order_parameter = None
-            sim.temperature = self.temperature
-# 
-        # TODO: should we set self.backend to None??
+        # Initial value of the bias (pseudopotential)
+        # for the initial trajectory
+        self.bias = 0.0 
+        self.sim.order_parameter = None
+        self.sim.temperature = self.temperature
+
         # TODO: might be needed for PT
         # Make sure base directories exist
         # from atooms.core.utils import mkdir
@@ -270,65 +258,40 @@ class TransitionPathSampling(Simulation):
     def __str__(self):
         return 'Transition path sampling'
 
-    def run_until(self, steps,trajectory_snapshot=1):
-        # just shortcuts
+    def run_until(self, steps):
+        # Just shortcuts
         sim, trj = self.sim, self.trj
 
-        # TODO: instead of run() we could use run_until() of sim[i], as we do in PT.
-        # This would avoid the verbose logging... but we should use an incremental variable
-        # for the running steps. Let's see how it goes...
-        # Or even we could have a local logging instance as self.log which can be muted on a per simulation basis
-
-        
-        # TODO: FT initialise trajectories: more elegant way?
+        # Initialize trajectories
         if self.current_step == 0:
-            print "# Generating first trajectory..."
-            for i in range(len(self.sim)):
-                #frame 0:
-                # TODO: DC this one is not necessary here, the backend has it already
-                
-                self.sim[i].system = copy(self.inp[i][0])  # copy() might not be necessary here
-                
-                # TODO: fix this hack
-                # self.sim[i].system.thermostat.temperature = self.temperature
-                # self.sim[i].run()
-                # Trajectory frame assignement takes care of copying, so copy() is not necessary here
-                self.trj[i][0] = self.sim[i].system
-                # Run 0
-                for j in range(1, self.frames):
-                    # self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
-                    self.sim[i].run()
-                    self.trj[i][j] = self.sim[i].system
+            log.debug("generating first trajectory")
+            # Trajectory frame assignement takes care of copying
+            self.trj[0] = self.sim.system
+            # Run 0
+            for j in range(1, self.frames):
+                # self.sim[i].system = copy(trj[i][j-1])  # copy() might not be necessary here
+                self.sim.run()
+                self.trj[j] = self.sim.system
 
-                q_old = calculate_order_parameter(self.trj[i])
-                sim[i].order_parameter = q_old
+            q_old = calculate_order_parameter(self.trj)
+            sim.order_parameter = q_old
                     
             # TPS simulation
-            # calculating the value of the initial potential
-            setup(self.bias, self.sim, self.trj, self.umbrellas, self.k)
+            # Calculate the value of the initial potential
+            self.bias = calculate_bias(self.trj, self.umbrella, self.k)
             log.debug("tps bias after initialisation %s", self.bias)
 
-
         for k in range(steps - self.current_step):
-            step = self.current_step + k
-            log.info('tps step %s', step)
-            if step%trajectory_snapshot==0:
-              for i in range(len(sim)):
-                with TrajectoryXYZ('tj%s.xyz'%step,'w',fields=['position']) as th:
-                  for frame in range(len(trj[i])):
-                    th.write(trj[i][frame],step = frame)
+            log.debug('tps step %s', self.current_step + k)           
             # We might have several replicas of simulations with different parameters
-            for i in range(len(self.sim)): # FT: to be distributed?
-                self.sim[i].system.set_temperature(self.temperature)
-                self.acceptance += mc_step(self.sim[i], self.trj[i], self.biasing_field[i])
-                # print "    p_acc", self.acceptance/(self.current_step+1.0)
+            self.sim.system.set_temperature(self.temperature)
+            self.acceptance += mc_step(self.sim, self.trj,
+                                       self.biasing_field, ratio=self._ratio[0])
 
-                
-        # Its up to us to update our steps
+        # It's up to us to update our steps
         self.current_step = steps
 
     def _info_backend(self):
-        txt = 'backend: %s' % self.sim[0]
+        txt = 'backend: %s' % self.sim
         txt += 'output path: %s' % self.output_path
-        txt += 'number of replicas: %d' % len(self.sim)
         return txt
