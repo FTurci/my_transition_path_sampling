@@ -211,7 +211,7 @@ class TransitionPathSampling(Simulation):
 
     version = '%s+%s (%s)' % (__version__, __commit__, __date__)
 
-    def __init__(self, sim, temperature, umbrella=None, steps=0, output_path=None,
+    def __init__(self, sim, temperature, umbrella=0.0, steps=0, output_path=None,
                  frames=2, k=0.01, biasing_field=0.0, restart=False,
                  shift_weight=1, shoot_weight=1):
         """
