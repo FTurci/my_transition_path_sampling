@@ -18,6 +18,9 @@ test:
 	python -m unittest discover -s tests
 
 install: version
+	python setup.py install
+
+user: version
 	python setup.py install --user
 
 develop:
