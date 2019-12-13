@@ -9,7 +9,7 @@ From python:
 
 ```python
 from atooms.simulation import Simulation
-from atooms.simulation.lammps import LAMMPS
+from atooms.backends.lammps import LAMMPS
 from atooms.transition_path_sampling import TransitionPathSampling
 
 # Create backends and wrap them as simulation instances
