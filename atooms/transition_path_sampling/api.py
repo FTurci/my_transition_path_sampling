@@ -25,13 +25,13 @@ def mobility(t):
     side = t[0].cell.side
     K = 0
     unfoldedtj = Unfolded(t, fixed_cm=True)
-    unfoldedtj.add_callback(filter_species, '1')
+    #unfoldedtj.add_callback(filter_species, '1')
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
         pos_1 = unfoldedtj[j].dump('pos')
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
-    unfoldedtj.callbacks.pop()
+    #unfoldedtj.callbacks.pop()
     return K
 
 def write_thermo_tps(sim):
@@ -41,10 +41,10 @@ def write_thermo_tps(sim):
         with open(f, 'w') as fh:
             fh.write('# columns: steps, order parameter q, q / N, q / (N*t_obs)\n')
     else:
-        q = sim.sim[0].order_parameter
+        q = sim.sim.order_parameter
         with open(f, 'a') as fh:
-            fh.write('%d %g %g %g\n' % (sim.current_step, q, q / (len(sim.sim[0].system.particle)),
-                                        q / (len(sim.sim[0].system.particle) * sim._tobs)))
+            fh.write('%d %g %g %g\n' % (sim.current_step, q, q / (len(sim.sim.system.particle)),
+                                        q / (len(sim.sim.system.particle) * sim._tobs)))
 
 def write_msd_tps(sim):
     f = sim.output_path + '.xyz'
