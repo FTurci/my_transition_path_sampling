@@ -31,7 +31,7 @@ def mobility(t):
         pos_1 = unfoldedtj[j].dump('pos')
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
-    t.callbacks.pop()
+    unfoldedtj.callbacks.pop()
     return K
 
 def write_thermo_tps(sim):
