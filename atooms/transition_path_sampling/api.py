@@ -119,11 +119,9 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
             cmd = script
 
     # Prepare backends
-    sim = []
-    for i in range(nsim):
-        lmp = LAMMPS(input_file, cmd)
-        lmp.verbose = False
-        sim.append(Simulation(lmp, steps=int(round(delta_t / dt))))
+    lmp = LAMMPS(input_file, cmd)
+    lmp.verbose = False
+    sim = Simulation(lmp, steps=int(round(delta_t / dt)))
 
     # Always log to file
     setup_logging(filename=output + '.log', name='atooms.transition_path_sampling', level=20)
