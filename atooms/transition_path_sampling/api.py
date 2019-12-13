@@ -137,8 +137,7 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
                                  shift_weight=shift_weight,
                                  shoot_weight=shoot_weight)
     tps._tobs = t_obs
-    for s in tps.sim:
-        s.system.thermostat = Thermostat(T, relaxation_time=10.0)
+    tps.sim.system.thermostat = Thermostat(T, relaxation_time=10.0)
     if thermo_interval > 0:
         tps.add(write_thermo_tps, thermo_interval)
     if trajectory_interval > 0:
