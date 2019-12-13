@@ -1,6 +1,7 @@
 import os
 import logging
 import numpy as np
+import atooms.trajectory
 import atooms.core.progress
 from atooms.trajectory.decorators import Unfolded, filter_species
 from atooms.simulation import Simulation
@@ -60,7 +61,7 @@ def write_msd_tps(sim):
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
          dt=0.005, frames=-1, delta_t=-1.0, t_obs=-1.0, script='',
          verbose=False, shift_weight=1, shoot_weight=1, debug=False,
-         trajectory_interval=0, thermo_interval=1):
+         trajectory_interval=0, thermo_interval=1, deep_copy=False):
 
     # Initial checks
     if input_file is None:
@@ -131,6 +132,11 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         log.info('{:12s}: {}'.format(key, _db[key]))
 
     # Setup and run TPS simulation
+    if deep_copy:
+        core.TrajectoryRam = atooms.trajectory.ram.TrajectoryRamFull
+    else:
+        core.TrajectoryRam = atooms.trajectory.ram.TrajectoryRam
+        
     tps = TransitionPathSampling(sim, output_path=output,
                                  temperature=T, steps=steps,
                                  frames=frames, biasing_field=field,
