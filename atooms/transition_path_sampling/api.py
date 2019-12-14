@@ -9,7 +9,6 @@ from atooms.system import Thermostat
 from atooms.backends.lammps import LAMMPS
 from atooms.core.utils import setup_logging, mkdir
 from atooms.transition_path_sampling import core, TransitionPathSampling
-from atooms.trajectory import TrajectoryXYZ
 
 
 log = logging.getLogger(__name__)
@@ -21,18 +20,16 @@ def self_overlap(r0, r1, side, a_square):
     return qij.sum()
 
 def mobility(t):
-    # Note: the trajectory must be unfolded
-    # pos = [s.dump('pos') for s in ]
-    side = t[0].cell.side
+    # The trajectory must be unfolded
     K = 0
     unfoldedtj = Unfolded(t, fixed_cm=True)
-    #unfoldedtj.add_callback(filter_species, '1')
+    unfoldedtj.add_callback(filter_species, '1')
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
         pos_1 = unfoldedtj[j].dump('pos')
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
-    #unfoldedtj.callbacks.pop()
+    unfoldedtj.callbacks.pop()
     return K
 
 def write_thermo_tps(sim):
@@ -81,7 +78,6 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         atooms.core.progress.active = False
 
     # Define time intervals
-    nsim = 1
     if delta_t > 0 and frames > 0:
         t_obs = delta_t * frames
     elif t_obs > 0  and frames > 0:
@@ -136,7 +132,7 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         core.TrajectoryRam = atooms.trajectory.ram.TrajectoryRamFull
     else:
         core.TrajectoryRam = atooms.trajectory.ram.TrajectoryRam
-        
+
     tps = TransitionPathSampling(sim, output_path=output,
                                  temperature=T, steps=steps,
                                  frames=frames, biasing_field=field,
