@@ -2,26 +2,26 @@
 
 import random
 import logging
+import copy
 import numpy as np
-from copy import copy
-from atooms.trajectory import TrajectoryXYZ, TrajectoryRam
+from atooms.trajectory import TrajectoryRam
 import atooms.trajectory
 from atooms.simulation import Simulation
-from atooms.backends.dryrun import DryRun
 from atooms.transition_path_sampling import __version__, __date__, __commit__
 
 log = logging.getLogger(__name__)
 TrajectoryRam = atooms.trajectory.ram.TrajectoryRam
 
+
 def first_half(tj, margin=0):
     """Return an integer in [margin,last/2)"""
     last = len(tj)
-    return margin+np.random.randint(last/2-margin)
+    return margin + np.random.randint(last/2 - margin)
 
 def second_half(tj, margin=0):
     """Return an integer in [last/2,last-margin)"""
     last = len(tj)
-    return last-margin-1-np.random.randint(last/2-margin)
+    return last - margin - 1 - np.random.randint(last/2 - margin)
 
 def shoot_forward(sim, tj, frame):
     """
@@ -30,7 +30,7 @@ def shoot_forward(sim, tj, frame):
     time.
     """
     log.debug('tps shoot forward')
-    sim.system = tj[frame]
+    sim.system = copy.deepcopy(tj[frame])
     # We completely reshuffle the velocities, which is a big perturbation...
     sim.system.set_temperature(sim.temperature)
 
@@ -47,11 +47,11 @@ def shoot_backward(sim, tj, frame):
     time.
     """
     log.debug('tps shoot backward')
-    sim.system = tj[frame]
+    # Fullram tracks the new frames here and  copy() is NOT enough. We need a deep_copy
+    sim.system = copy.deepcopy(tj[frame]) #tj[frame]
     sim.system.set_temperature(sim.temperature)
     # !!!
     # Possible issue with time reversal
-    
     for j in range(frame-1, -1, -1):
         sim.run()
         tj[j] = sim.system
@@ -69,17 +69,15 @@ def shift_forward(sim, tj, frame):
     # reverse copy
     for i in range(last-frame-1, -1, -1):
         # copytj[(last-frame)-i] = tj[i]
-        system = tj[i]
+        system = copy.deepcopy(tj[i])
         for p in system.particle:
             p.velocity *= -1
-        copytj[(last-frame)-i] = system
+        copytj[(last - frame) - i] = system
 
     # !!!
     # Possible issue with time reversal
-    #sim.system.set_temperature(sim.temperature)
-    sim.system = copytj[-1]
+    sim.system = copy.deepcopy(copytj[-1])
     sim.system.set_temperature(sim.temperature)
-
     for j in range(frame, last, 1):
         sim.run()
         copytj[j] = sim.system
@@ -93,18 +91,17 @@ def shift_backward(sim, tj, frame):
     """
     log.debug('tps shift backward')
     last = len(tj)
-    copytj=TrajectoryRam()
+    copytj = TrajectoryRam()
     # _forward copy
     for i in range(frame, last, 1):
-        copytj[i-frame] = tj[i]
+        copytj[i-frame] = copy.deepcopy(tj[i])
 
     # continue from the end
-    sim.system = copytj[-1]
-    #
+    sim.system = copy.deepcopy(copytj[-1])
     sim.system.set_temperature(sim.temperature)
     for j in range(frame):
         sim.run()
-        copytj[j+(last-frame)] = sim.system
+        copytj[j + (last - frame)] = sim.system
     return copytj
 
 
@@ -116,21 +113,21 @@ def generate_trial(sim, tj, ratio):
     - decide then whether to shoot or to shift the trajectory
     - return the trial trajectory
     """
-    r=np.random.uniform(0,1)
-    if r<0.5:
+    r = np.random.uniform(0,1)
+    if r < 0.5:
     #_forward
-        shoot = 2.*r < ratio
+        shoot = 2. * r < ratio
         if shoot:
-            trial=shoot_forward(sim, tj, second_half(tj))
+            trial = shoot_forward(sim, tj, second_half(tj))
         else:
-            trial=shift_forward(sim, tj,first_half(tj))
+            trial = shift_forward(sim, tj, first_half(tj))
     else:
     #backward
-        shoot = 2.*(r-.5) < ratio
+        shoot = 2. * (r-.5) < ratio
         if shoot:
-            trial=shoot_backward(sim, tj, first_half(tj))
+            trial = shoot_backward(sim, tj, first_half(tj))
         else:
-            trial=shift_backward(sim, tj, second_half(tj))
+            trial = shift_backward(sim, tj, second_half(tj))
     return trial
 
 def update(trajectory, attempt):
@@ -146,7 +143,7 @@ def calculate_order_parameter(attempt):
 
 def calculate_bias(tj, umbrella, k):
     """Calculate the pseudo potential, from quadratic umbrellas."""
-    return 0.5*k*(calculate_order_parameter(tj)-umbrella)
+    return 0.5*k*(calculate_order_parameter(tj) - umbrella)
 
 def mc_step(simulation, trajectory, biasing_field,ratio=0.25):
     """
@@ -162,21 +159,27 @@ def mc_step(simulation, trajectory, biasing_field,ratio=0.25):
 
     It returns nothing, but it should update the trajectory and the bias.
     """
+    # Keep full copy of current trajectory
+    trj_old = copy.deepcopy(trajectory)
+    q_old = simulation.order_parameter
     # generate trial trajectory
-    q_old = simulation.order_parameter 
-
     attempt = generate_trial(simulation, trajectory, ratio)
     q_new = calculate_order_parameter(attempt)
     p = np.exp(-(q_new-q_old) * biasing_field)
 
     if np.random.uniform() < p:
         log.debug('tps accept move bias=%s p=%s', q_new, p)
-        # accept, overwrite the relevant part of trajectory
-        update(trajectory,attempt)
+        # Accept the new trajectory, which overwrites the relevant part of trajectory
+        # It is necessary to update frames one by one unless this function returns the new trajectory
+        # TODO: return the new trajectory instead of 0 or 1
+        update(trajectory, attempt)
         simulation.order_parameter = q_new
         return 1.0
 
     else:
+        log.debug('tps reject move bias=%s p=%s', q_new, p)
+        # Restore old trajectory
+        update(trajectory, trj_old)
         return 0.0
 
 def mc_step_umbrella(simulation, trajectory, umbrella, k, bias, ratio=0.25):
@@ -202,7 +205,7 @@ def mc_step_umbrella(simulation, trajectory, umbrella, k, bias, ratio=0.25):
         log.debug('tps accept move bias=%s p=%s', attempt_bias, p)
         # accept, overwrite the relevant part of trajectory
         update(trajectory,attempt)
-        
+
         return 1.0
     else:
         # reject, i.e. do nothing
@@ -217,7 +220,7 @@ class TransitionPathSampling(Simulation):
                  shift_weight=1, shoot_weight=1, seed=1):
         """
         Construct a tps instance that will run for `steps` iterations.
-        
+
         - `sim` is a Simulation instance
         - `temperature` is the thermostat temperature
         - `frames` is the number of subtrajectories used to compute
@@ -248,7 +251,7 @@ class TransitionPathSampling(Simulation):
 
         # Initial value of the bias (pseudopotential)
         # for the initial trajectory
-        self.bias = 0.0 
+        self.bias = 0.0
         self.sim.order_parameter = None
         self.sim.temperature = self.temperature
 
@@ -261,9 +264,6 @@ class TransitionPathSampling(Simulation):
         return 'Transition path sampling'
 
     def run_until(self, steps):
-        # Just shortcuts
-        sim, trj = self.sim, self.trj
-
         # Initialize trajectories
         if self.current_step == 0:
             log.debug("generating first trajectory")
@@ -276,17 +276,18 @@ class TransitionPathSampling(Simulation):
                 self.trj[j] = self.sim.system
 
             q_old = calculate_order_parameter(self.trj)
-            sim.order_parameter = q_old
-                    
+            self.sim.order_parameter = q_old
+
             # TPS simulation
             # Calculate the value of the initial potential
             self.bias = calculate_bias(self.trj, self.umbrella, self.k)
             log.debug("tps bias after initialisation %s", self.bias)
 
         for k in range(steps - self.current_step):
-            log.debug('tps step %s', self.current_step + k)           
+            log.debug('tps step %s', self.current_step + k)
             # We might have several replicas of simulations with different parameters
-            self.sim.system.set_temperature(self.temperature)
+            # TODO: DC I have commented this out, I do not understand why we should reset the velocities here
+            #self.sim.system.set_temperature(self.temperature)
             self.acceptance += mc_step(self.sim, self.trj,
                                        self.biasing_field, ratio=self._ratio[0])
 
