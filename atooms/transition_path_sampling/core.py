@@ -1,5 +1,6 @@
 """Sketch of TPS simulation."""
 
+import random
 import logging
 import numpy as np
 from copy import copy
@@ -213,7 +214,7 @@ class TransitionPathSampling(Simulation):
 
     def __init__(self, sim, temperature, umbrella=0.0, steps=0, output_path=None,
                  frames=2, k=0.01, biasing_field=0.0, restart=False,
-                 shift_weight=1, shoot_weight=1):
+                 shift_weight=1, shoot_weight=1, seed=1):
         """
         Construct a tps instance that will run for `steps` iterations.
         
@@ -226,6 +227,8 @@ class TransitionPathSampling(Simulation):
         """
         Simulation.__init__(self, sim.backend, output_path=output_path,
                             steps=steps, restart=restart)
+        np.random.seed(seed)
+        random.seed(seed)
         self.sim = sim
         # Note: the number of steps of the backend is set upon construction
         self.temperature = temperature
