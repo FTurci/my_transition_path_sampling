@@ -67,19 +67,29 @@ def shift_forward(sim, tj, frame):
     last = len(tj)
     copytj = TrajectoryRam()
     # reverse copy
+    #for i in range(last-frame-1, -1, -1):
     for i in range(last-frame-1, -1, -1):
         # copytj[(last-frame)-i] = tj[i]
         system = copy.deepcopy(tj[i])
         for p in system.particle:
             p.velocity *= -1
-        copytj[(last - frame) - i] = system
+        #print i, 'reverse copy into', (last - frame) - i -1
+        copytj[(last - frame) - i - 1] = system
 
     # !!!
     # Possible issue with time reversal
+    # TODO: essentially shifting leads to trajectories that are not unfolded properly. E.g. because they do not get unfolded even if they should. It means I guess that for some reason particles move too much?
     sim.system = copy.deepcopy(copytj[-1])
     sim.system.set_temperature(sim.temperature)
-    for j in range(frame, last, 1):
-        sim.run()
+    def check(sim):
+        print sim.current_step, [sim.system.particle[i].position[0] for i in range(200)],  'INS'
+    #sim.add(check, 100)
+    for j in range(frame + 1, last, 1):
+        #print j, 'adding from frame', frame + 1, 'to ', last
+        # TODO: this will perturb the simulations, due to roundoffs in r/w
+        #if j == 3: sim.add(check, 100)
+        sim.run()        
+        sim.remove(check)
         copytj[j] = sim.system
     return copytj
 
@@ -94,6 +104,7 @@ def shift_backward(sim, tj, frame):
     copytj = TrajectoryRam()
     # _forward copy
     for i in range(frame, last, 1):
+        #print i, 'fwd copy from into', i, i-frame
         copytj[i-frame] = copy.deepcopy(tj[i])
 
     # continue from the end
@@ -101,6 +112,7 @@ def shift_backward(sim, tj, frame):
     sim.system.set_temperature(sim.temperature)
     for j in range(frame):
         sim.run()
+        #print i, 'write into', j + (last - frame)
         copytj[j + (last - frame)] = sim.system
     return copytj
 
@@ -253,6 +265,7 @@ class TransitionPathSampling(Simulation):
         # for the initial trajectory
         self.bias = 0.0
         self.sim.order_parameter = None
+        # TODO: temperature is not an attribute of simulation
         self.sim.temperature = self.temperature
 
         # TODO: might be needed for PT
