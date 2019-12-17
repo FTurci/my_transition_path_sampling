@@ -77,7 +77,6 @@ def shift_forward(sim, tj, frame):
 
     # !!!
     # Possible issue with time reversal
-    # TODO: essentially shifting leads to trajectories that are not unfolded properly. E.g. because they do not get unfolded even if they should. It means I guess that for some reason particles move too much?
     sim.system = copy.deepcopy(copytj[-1])
     sim.system.set_temperature(sim.temperature)
     def check(sim):
