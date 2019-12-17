@@ -86,8 +86,6 @@ def shift_forward(sim, tj, frame):
     #sim.add(check, 50)
     for j in range(frame + 1, last, 1):
         #print j, 'adding from frame', frame + 1, 'to ', last
-        # TODO: this will perturb the simulations, due to roundoffs in r/w
-        #if j == 3: sim.add(check, 100)
         sim.run()        
         sim.remove(check)
         copytj[j] = sim.system
