@@ -67,7 +67,6 @@ def shift_forward(sim, tj, frame):
     last = len(tj)
     copytj = TrajectoryRam()
     # reverse copy
-    #for i in range(last-frame-1, -1, -1):
     for i in range(last-frame-1, -1, -1):
         # copytj[(last-frame)-i] = tj[i]
         system = copy.deepcopy(tj[i])
@@ -82,8 +81,9 @@ def shift_forward(sim, tj, frame):
     sim.system = copy.deepcopy(copytj[-1])
     sim.system.set_temperature(sim.temperature)
     def check(sim):
-        print sim.current_step, [sim.system.particle[i].position[0] for i in range(200)],  'INS'
-    #sim.add(check, 100)
+        with open('/tmp/1.xyz', 'a') as fh:
+            fh.write('{} {} {}\n'.format(sim.current_step, sim.system.temperature, [sim.system.particle[i].position[0] for i in range(20)]))
+    #sim.add(check, 50)
     for j in range(frame + 1, last, 1):
         #print j, 'adding from frame', frame + 1, 'to ', last
         # TODO: this will perturb the simulations, due to roundoffs in r/w
