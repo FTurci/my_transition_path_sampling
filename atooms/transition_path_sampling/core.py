@@ -12,6 +12,27 @@ from atooms.transition_path_sampling import __version__, __date__, __commit__
 log = logging.getLogger(__name__)
 TrajectoryRam = atooms.trajectory.ram.TrajectoryRam
 
+def mobility_dist(t):
+    import numpy
+    from atooms.trajectory.decorators import Unfolded, filter_species
+    K = []
+    #unfoldedtj = Unfolded(t, fixed_cm=True)
+    unfoldedtj = Unfolded(t)  #, fixed_cm=True) why fixing the cm? it increases K
+    unfoldedtj.add_callback(filter_species, '1')
+    #for i, s in enumerate(unfoldedtj):
+    #     print '+++', i, s.particle[1].position[:]
+    side = t[0].cell.side
+    pos_0 = unfoldedtj[0].dump('pos')
+    from atooms.system.particle import cm_position
+    for j in range(1, len(t)):
+        pos_1 = unfoldedtj[j].dump('pos')
+        #if ((pos_1[k] - pos_0[k])**2>7).any():
+        #    print j, k, (pos_1[k] - pos_0[k])**2
+        #print 'LAMM', sorted(((pos_1 - pos_0)**2).flatten())[:3], sorted(((pos_1 - pos_0)**2).flatten())[-3:]
+        K.append(numpy.sum((pos_1 - pos_0)**2))
+        pos_0 = pos_1
+    unfoldedtj.callbacks.pop()
+    return K
 
 def first_half(tj, margin=0):
     """Return an integer in [margin,last/2)"""
@@ -30,6 +51,7 @@ def shoot_forward(sim, tj, frame):
     time.
     """
     log.debug('tps shoot forward')
+    #print 'shoot forw',frame,
     sim.system = copy.deepcopy(tj[frame])
     # We completely reshuffle the velocities, which is a big perturbation...
     sim.system.set_temperature(sim.temperature)
@@ -47,6 +69,7 @@ def shoot_backward(sim, tj, frame):
     time.
     """
     log.debug('tps shoot backward')
+    #print 'shoot back',frame,
     # Fullram tracks the new frames here and  copy() is NOT enough. We need a deep_copy
     sim.system = copy.deepcopy(tj[frame]) #tj[frame]
     sim.system.set_temperature(sim.temperature)
@@ -64,16 +87,17 @@ def shift_forward(sim, tj, frame):
     continue the trajectory for the missing bit on the other end.
     """
     log.debug('tps shift _forward')
+    #print 'shift forw',frame,
     last = len(tj)
     copytj = TrajectoryRam()
     # reverse copy
-    for i in range(last-frame-1, -1, -1):
+    for i in range(frame, -1, -1):
         # copytj[(last-frame)-i] = tj[i]
         system = copy.deepcopy(tj[i])
         for p in system.particle:
             p.velocity *= -1
-        #print i, 'reverse copy into', (last - frame) - i -1
-        copytj[(last - frame) - i - 1] = system
+        #if frame < 10: print i, 'reverse copy into', frame - i
+        copytj[frame - i] = system
 
     # !!!
     # Possible issue with time reversal
@@ -84,10 +108,15 @@ def shift_forward(sim, tj, frame):
             fh.write('{} {} {}\n'.format(sim.current_step, sim.system.temperature, [sim.system.particle[i].position[0] for i in range(20)]))
     #sim.add(check, 50)
     for j in range(frame + 1, last, 1):
-        #print j, 'adding from frame', frame + 1, 'to ', last
+        #if frame < 10: print j, 'adding from frame', frame + 1, 'to ', last
         sim.run()        
-        sim.remove(check)
+        #sim.remove(check)
         copytj[j] = sim.system
+
+    #if frame < 10:
+        #q_new = mobility_dist(copytj)
+        #print q_new,
+
     return copytj
 
 def shift_backward(sim, tj, frame):
@@ -97,11 +126,12 @@ def shift_backward(sim, tj, frame):
     trajectory for the missing bit on the other end.
     """
     log.debug('tps shift backward')
+    #print 'shift back', frame,
     last = len(tj)
     copytj = TrajectoryRam()
     # _forward copy
     for i in range(frame, last, 1):
-        #print i, 'fwd copy from into', i, i-frame
+        #print i, 'bck copy from into', i, i-frame
         copytj[i-frame] = copy.deepcopy(tj[i])
 
     # continue from the end
@@ -109,7 +139,7 @@ def shift_backward(sim, tj, frame):
     sim.system.set_temperature(sim.temperature)
     for j in range(frame):
         sim.run()
-        #print i, 'write into', j + (last - frame)
+        #print j, 'write into', j + (last - frame)
         copytj[j + (last - frame)] = sim.system
     return copytj
 
@@ -172,9 +202,11 @@ def mc_step(simulation, trajectory, biasing_field,ratio=0.25):
     trj_old = copy.deepcopy(trajectory)
     q_old = simulation.order_parameter
     # generate trial trajectory
+    #print simulation.current_step, len(trajectory),
     attempt = generate_trial(simulation, trajectory, ratio)
     q_new = calculate_order_parameter(attempt)
     p = np.exp(-(q_new-q_old) * biasing_field)
+    #print 'move {} {}'.format(q_new - q_old, p)
 
     if np.random.uniform() < p:
         log.debug('tps accept move bias=%s p=%s', q_new, p)
