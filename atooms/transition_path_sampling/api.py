@@ -108,7 +108,7 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
             pair_coeff      1 2 1.5 0.8  2.0
             pair_coeff      2 2 0.5 0.88 2.2
             neighbor        0.3 bin
-            neigh_modify    every 20 delay 0 check no
+            neigh_modify    every 10 delay 0 check yes
             #velocity        all create {0} 12345
             timestep        {1}
             """.format(T, dt)
