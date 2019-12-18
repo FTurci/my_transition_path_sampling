@@ -144,8 +144,51 @@ class Test(unittest.TestCase):
         sim.temperature = 1.0  # This is needed by shift()
         from atooms.transition_path_sampling.core import shift_forward, shift_backward
         print numpy.mean(mobility_dist(trj))
-        # new = shift_forward(sim, trj, len(trj)/2)        
-        # print numpy.mean(mobility_dist(new))
+        new = shift_forward(sim, trj, len(trj)/2)        
+        print numpy.mean(mobility_dist(new))
+
+    @unittest.skipIf(not _LAMMPS, 'lammps not installed')
+    def test_lammps_full(self):
+        file_inp = 'data/ka_rho1.2.xyz'
+        # Set up data structures
+        cmd = """
+        pair_style      lj/cut 2.5
+        pair_coeff      1 1 1.0 1.0  2.5
+        pair_coeff      1 2 1.5 0.8  2.0
+        pair_coeff      2 2 0.5 0.88 2.2
+        neighbor        0.3 bin
+        neigh_modify    every 10 delay 0 check yes
+        timestep        0.005
+        """
+
+        # trj = TrajectoryRam()
+        # dyn = LAMMPS(file_inp, cmd)
+        # dyn.system.temperature = 1.0
+        # dyn.system.thermostat = atooms.system.Thermostat(1.0, relaxation_time=1.0)
+        # block = 5000
+        # sim = Simulation(dyn, steps=block * 10)
+        # def store(sim, trj):
+        #     trj.write(sim.system, sim.current_step)
+        # sim.add(store, block, trj)
+        # sim.temperature = 1.0  # This is needed by shift()
+        # sim.run()
+
+        import numpy, random
+        numpy.random.seed(2)
+        random.seed(2)
+        from atooms.core.utils import setup_logging
+        from atooms.transition_path_sampling.api import mobility
+        import atooms.transition_path_sampling
+        #setup_logging(name='atooms.simulation', level=40)
+        #setup_logging(name='atooms.transition_path_sampling', level=10)
+        atooms.core.progress.active = False
+        sim = Simulation(LAMMPS(file_inp, cmd), steps=500)
+        sim.system.temperature = 1.0
+        sim.system.thermostat = atooms.system.Thermostat(1.0, relaxation_time=1.0)
+        tps = TransitionPathSampling(sim, temperature=1.0, steps=300, frames=40)
+        atooms.transition_path_sampling.core.calculate_order_parameter = mobility
+        tps.run()
+
         
 if __name__ == '__main__':
     unittest.main(verbosity=0)
