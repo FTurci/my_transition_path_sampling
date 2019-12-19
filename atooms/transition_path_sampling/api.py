@@ -22,7 +22,7 @@ def self_overlap(r0, r1, side, a_square):
 def mobility(t):
     # The trajectory must be unfolded
     K = 0
-    unfoldedtj = Unfolded(t, fixed_cm=True)
+    unfoldedtj = Unfolded(t)  #, fixed_cm=True)
     unfoldedtj.add_callback(filter_species, '1')
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
@@ -58,7 +58,8 @@ def write_msd_tps(sim):
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
          dt=0.005, frames=-1, delta_t=-1.0, t_obs=-1.0, script='',
          verbose=False, shift_weight=1, shoot_weight=1, debug=False,
-         trajectory_interval=0, thermo_interval=1, deep_copy=False):
+         trajectory_interval=0, thermo_interval=1, deep_copy=False,
+         seed=1):
 
     # Initial checks
     if input_file is None:
@@ -137,7 +138,8 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
                                  temperature=T, steps=steps,
                                  frames=frames, biasing_field=field,
                                  shift_weight=shift_weight,
-                                 shoot_weight=shoot_weight)
+                                 shoot_weight=shoot_weight,
+                                 seed=seed)
     tps._tobs = t_obs
     tps.sim.system.thermostat = Thermostat(T, relaxation_time=10.0)
     if thermo_interval > 0:
