@@ -1,6 +1,7 @@
 import os
 import logging
 import numpy as np
+import atooms.trajectory
 import atooms.core.progress
 from atooms.trajectory.decorators import Unfolded, filter_species
 from atooms.simulation import Simulation
@@ -8,7 +9,6 @@ from atooms.system import Thermostat
 from atooms.backends.lammps import LAMMPS
 from atooms.core.utils import setup_logging, mkdir
 from atooms.transition_path_sampling import core, TransitionPathSampling
-from atooms.trajectory import TrajectoryXYZ
 
 
 log = logging.getLogger(__name__)
@@ -20,18 +20,16 @@ def self_overlap(r0, r1, side, a_square):
     return qij.sum()
 
 def mobility(t):
-    # Note: the trajectory must be unfolded
-    # pos = [s.dump('pos') for s in ]
-    side = t[0].cell.side
+    # The trajectory must be unfolded
     K = 0
-    unfoldedtj = Unfolded(t, fixed_cm=True)
+    unfoldedtj = Unfolded(t)  #, fixed_cm=True)
     unfoldedtj.add_callback(filter_species, '1')
     pos_0 = unfoldedtj[0].dump('pos')
     for j in range(1, len(t)):
         pos_1 = unfoldedtj[j].dump('pos')
         K += np.sum((pos_1 - pos_0)**2)
         pos_0 = pos_1
-    t.callbacks.pop()
+    unfoldedtj.callbacks.pop()
     return K
 
 def write_thermo_tps(sim):
@@ -41,10 +39,10 @@ def write_thermo_tps(sim):
         with open(f, 'w') as fh:
             fh.write('# columns: steps, order parameter q, q / N, q / (N*t_obs)\n')
     else:
-        q = sim.sim[0].order_parameter
+        q = sim.sim.order_parameter
         with open(f, 'a') as fh:
-            fh.write('%d %g %g %g\n' % (sim.current_step, q, q / (len(sim.sim[0].system.particle)),
-                                        q / (len(sim.sim[0].system.particle) * sim._tobs)))
+            fh.write('%d %g %g %g\n' % (sim.current_step, q, q / (len(sim.sim.system.particle)),
+                                        q / (len(sim.sim.system.particle) * sim._tobs)))
 
 def write_msd_tps(sim):
     f = sim.output_path + '.xyz'
@@ -60,7 +58,8 @@ def write_msd_tps(sim):
 def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
          dt=0.005, frames=-1, delta_t=-1.0, t_obs=-1.0, script='',
          verbose=False, shift_weight=1, shoot_weight=1, debug=False,
-         trajectory_interval=0, thermo_interval=1):
+         trajectory_interval=0, thermo_interval=1, deep_copy=False,
+         seed=1):
 
     # Initial checks
     if input_file is None:
@@ -80,7 +79,6 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         atooms.core.progress.active = False
 
     # Define time intervals
-    nsim = 1
     if delta_t > 0 and frames > 0:
         t_obs = delta_t * frames
     elif t_obs > 0  and frames > 0:
@@ -111,7 +109,7 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
             pair_coeff      1 2 1.5 0.8  2.0
             pair_coeff      2 2 0.5 0.88 2.2
             neighbor        0.3 bin
-            neigh_modify    every 20 delay 0 check no
+            neigh_modify    every 10 delay 0 check yes
             #velocity        all create {0} 12345
             timestep        {1}
             """.format(T, dt)
@@ -119,11 +117,9 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
             cmd = script
 
     # Prepare backends
-    sim = []
-    for i in range(nsim):
-        lmp = LAMMPS(input_file, cmd)
-        lmp.verbose = False
-        sim.append(Simulation(lmp, steps=int(round(delta_t / dt))))
+    lmp = LAMMPS(input_file, cmd)
+    lmp.verbose = False
+    sim = Simulation(lmp, steps=int(round(delta_t / dt)))
 
     # Always log to file
     setup_logging(filename=output + '.log', name='atooms.transition_path_sampling', level=20)
@@ -133,14 +129,19 @@ def main(output, input_file=None, field=0.0, steps=0, T=-1.0,
         log.info('{:12s}: {}'.format(key, _db[key]))
 
     # Setup and run TPS simulation
+    if deep_copy:
+        core.TrajectoryRam = atooms.trajectory.ram.TrajectoryRamFull
+    else:
+        core.TrajectoryRam = atooms.trajectory.ram.TrajectoryRam
+
     tps = TransitionPathSampling(sim, output_path=output,
                                  temperature=T, steps=steps,
                                  frames=frames, biasing_field=field,
                                  shift_weight=shift_weight,
-                                 shoot_weight=shoot_weight)
+                                 shoot_weight=shoot_weight,
+                                 seed=seed)
     tps._tobs = t_obs
-    for s in tps.sim:
-        s.system.thermostat = Thermostat(T, relaxation_time=10.0)
+    tps.sim.system.thermostat = Thermostat(T, relaxation_time=10.0)
     if thermo_interval > 0:
         tps.add(write_thermo_tps, thermo_interval)
     if trajectory_interval > 0:
